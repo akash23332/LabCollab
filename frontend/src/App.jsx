@@ -10,6 +10,19 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import LoginModal from './components/auth/LoginModal'
 import UserLayout from './layouts/UserLayout'
 import UserDashboard from './pages/user/Dashboard'
+import FindEquipment from './pages/user/FindEquipment'
+
+function DashboardContent() {
+  const { activeTab } = useAuth()
+
+  switch (activeTab) {
+    case 'explore':
+      return <FindEquipment />
+    case 'overview':
+    default:
+      return <UserDashboard />
+  }
+}
 
 function MainApp() {
   const { currentView } = useAuth()
@@ -17,7 +30,7 @@ function MainApp() {
   if (currentView === 'dashboard') {
     return (
       <UserLayout>
-        <UserDashboard />
+        <DashboardContent />
       </UserLayout>
     )
   }
@@ -45,4 +58,3 @@ export default function App() {
     </AuthProvider>
   )
 }
-
