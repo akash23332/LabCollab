@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import {
   Package,
   CalendarClock,
@@ -58,6 +59,7 @@ const INITIAL_FACILITIES = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Booking requests with interactive approve/reject state
   const [requests, setRequests] = useState([
@@ -166,7 +168,7 @@ export default function Dashboard() {
             <span className="admin-hero-live-dot" />
             Lab Operations Center
           </span>
-          <h1 className="admin-hero-title">Welcome back, Tech. Kumar</h1>
+          <h1 className="admin-hero-title">Welcome back, {user?.name || 'Tech. Kumar'}</h1>
           <p className="admin-hero-subtitle">
             Monitor laboratory resources, review student equipment reservations, and track live telemetry.
           </p>

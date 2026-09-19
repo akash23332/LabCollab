@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Search, Menu, X, Sparkles, Microscope, User, ArrowRight } from 'lucide-react'
 import Button from '../ui/Button'
 import { navLinks } from '../../data/landingData'
@@ -6,7 +7,8 @@ import { useAuth } from '../../context/AuthContext'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
-  const { isAuthenticated, user, openLoginModal, navigateTo } = useAuth()
+  const navigate = useNavigate()
+  const { isAuthenticated, user, openLoginModal } = useAuth()
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#EAE1D3] bg-[#F8F5EE]/90 backdrop-blur-md transition-all">
@@ -42,7 +44,7 @@ export default function Navbar() {
           <div className="relative">
             <button
               type="button"
-              onClick={openLoginModal}
+              onClick={() => navigate('/login')}
               className="flex items-center gap-2 rounded-xl border border-[#EAE1D3] bg-white px-3 py-2 text-xs text-[#5A4D45] shadow-xs transition hover:border-[#C58A48] hover:text-[#241B16]"
             >
               <Search className="h-3.5 w-3.5 text-[#736357]" />
@@ -56,7 +58,7 @@ export default function Navbar() {
           {isAuthenticated ? (
             <button
               type="button"
-              onClick={() => navigateTo('dashboard')}
+              onClick={() => navigate(user?.role === 'admin' ? '/admin/dashboard' : '/dashboard')}
               className="flex items-center gap-2 rounded-xl bg-[#241B16] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#382C25] transition"
             >
               <div className="flex h-5 w-5 items-center justify-center rounded-md bg-[#C58A48] text-white text-[10px]">
@@ -69,7 +71,7 @@ export default function Navbar() {
             <>
               <button
                 type="button"
-                onClick={openLoginModal}
+                onClick={() => navigate('/login')}
                 className="px-3 py-2 text-sm font-medium text-[#4A3E37] transition hover:text-[#241B16]"
               >
                 Log in
@@ -77,7 +79,7 @@ export default function Navbar() {
               <Button
                 variant="dark"
                 showArrow
-                onClick={openLoginModal}
+                onClick={() => navigate('/signup')}
               >
                 Get Started
               </Button>
@@ -115,7 +117,7 @@ export default function Navbar() {
                 className="w-full"
                 onClick={() => {
                   setOpen(false)
-                  navigateTo('dashboard')
+                  navigate(user?.role === 'admin' ? '/admin/dashboard' : '/dashboard')
                 }}
               >
                 Go to Dashboard ({user?.name})
@@ -127,7 +129,7 @@ export default function Navbar() {
                   className="w-full"
                   onClick={() => {
                     setOpen(false)
-                    openLoginModal()
+                    navigate('/login')
                   }}
                 >
                   Log in
@@ -138,7 +140,7 @@ export default function Navbar() {
                   className="w-full"
                   onClick={() => {
                     setOpen(false)
-                    openLoginModal()
+                    navigate('/signup')
                   }}
                 >
                   Get Started

@@ -1,0 +1,327 @@
+/* ============================================================
+   LABCOLLAB AUTHENTICATION STYLING
+   Warm cream & espresso design system matching the LabCollab theme
+   ============================================================ */
+
+.auth {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #f7f4ef;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+.auth__card {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  border: 1px solid #ece4d7;
+  border-radius: 20px;
+  padding: 34px 32px;
+  box-shadow: 0 24px 60px rgba(52, 40, 24, 0.12);
+  box-sizing: border-box;
+  animation: authFadeIn 220ms ease-out;
+}
+
+.auth__card--signup {
+  max-width: 480px;
+  padding: 36px 34px;
+}
+
+@keyframes authFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 16px;
+  color: #221c15;
+  text-decoration: none;
+  margin-bottom: 20px;
+}
+
+.auth__brand-icon {
+  font-size: 18px;
+}
+
+.auth__card h1 {
+  margin: 0 0 6px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #221c15;
+  letter-spacing: -0.02em;
+}
+
+.auth__sub {
+  margin: 0 0 22px;
+  font-size: 13.5px;
+  color: #8a8175;
+  line-height: 1.5;
+}
+
+.auth__error {
+  background: #fdf2ed;
+  color: #b3492c;
+  border: 1px solid #f2c7b8;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth__notice {
+  background: #f0f7f4;
+  color: #2e6b52;
+  border: 1px solid #c8e6da;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+
+.auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth__form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #443c31;
+}
+
+.auth__input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth__form input[type="text"],
+.auth__form input[type="email"],
+.auth__form input[type="password"] {
+  width: 100%;
+  border: 1px solid #e2d7c3;
+  border-radius: 11px;
+  padding: 11px 13px;
+  font-size: 14px;
+  color: #221c15;
+  background: #fdfaf4;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.auth__input-wrap input {
+  padding-right: 42px;
+}
+
+.auth__form input:focus {
+  border-color: #b08a55;
+  box-shadow: 0 0 0 3px rgba(176, 138, 85, 0.18);
+  background: #ffffff;
+}
+
+.auth__eye {
+  position: absolute;
+  right: 11px;
+  background: none;
+  border: none;
+  color: #9c9183;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.auth__eye:hover {
+  color: #443c31;
+}
+
+.auth__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Password strength meter */
+.auth__strength {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.auth__strength-bars {
+  display: flex;
+  gap: 5px;
+  height: 4px;
+}
+
+.auth__strength-bar {
+  flex: 1;
+  background: #ebdccb;
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+
+.auth__strength-bar--weak { background: #e05d44; }
+.auth__strength-bar--medium { background: #d99b26; }
+.auth__strength-bar--strong { background: #2f855a; }
+
+.auth__strength-text {
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.auth__strength-text--weak { color: #e05d44; }
+.auth__strength-text--medium { color: #d99b26; }
+.auth__strength-text--strong { color: #2f855a; }
+
+/* Terms checkbox */
+.auth__terms {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6e6559;
+  line-height: 1.4;
+  margin: 2px 0;
+}
+
+.auth__terms input[type="checkbox"] {
+  margin-top: 2px;
+  accent-color: #8a5a2b;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.auth__forgot {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: #8a5a2b;
+  cursor: pointer;
+  padding: 0;
+  text-align: right;
+  align-self: flex-end;
+  margin-top: -6px;
+  text-decoration: none;
+}
+
+.auth__forgot:hover {
+  text-decoration: underline;
+}
+
+.auth__submit {
+  margin-top: 6px;
+  border: 0;
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #fdf8f0;
+  background: linear-gradient(135deg, #2b2318, #4a3a26);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.auth__submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(34, 28, 21, 0.3);
+}
+
+.auth__submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.auth__submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.auth__demo {
+  margin-top: 20px;
+  padding: 13px 14px;
+  border: 1px dashed #e2d7c3;
+  border-radius: 12px;
+  background: #fdfaf4;
+  font-size: 12.5px;
+  color: #8a8175;
+}
+
+.auth__demo-title {
+  display: block;
+  font-weight: 600;
+  color: #645a4e;
+  margin-bottom: 8px;
+}
+
+.auth__demo-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.auth__demo-btn {
+  border: 1px solid #e2d7c3;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8a5a2b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.auth__demo-btn:hover {
+  background: #f7f2e9;
+  border-color: #d1bfa7;
+}
+
+.auth__switch {
+  margin: 20px 0 0;
+  text-align: center;
+  font-size: 13px;
+  color: #8a8175;
+}
+
+.auth__switch a {
+  color: #8a5a2b;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.auth__switch a:hover {
+  text-decoration: underline;
+}

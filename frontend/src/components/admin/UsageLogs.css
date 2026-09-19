@@ -1,0 +1,456 @@
+/* ============================================================
+   LABCOLLAB ADMIN — USAGE LOGS
+   Integrated with LabCollab Design System (Warm Editorial SaaS)
+   ============================================================ */
+
+.admin-usage-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ul-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-bottom: 0;
+}
+
+.ul-summary-grid .admin-stat-card {
+  padding: 20px 22px;
+  gap: 14px;
+  min-width: 0;
+}
+
+.ul-summary-grid .admin-stat-value {
+  font-size: 26px;
+}
+
+/* ---------- Header search ---------- */
+
+.ul-header-search {
+  position: relative;
+  display: inline-flex;
+}
+
+/* ---------- Status badges ---------- */
+
+.admin-status-badge.ul-completed {
+  background: var(--admin-success-bg);
+  color: var(--admin-success);
+  border-color: var(--admin-success-border);
+}
+
+.admin-status-badge.ul-active {
+  background: rgba(14, 165, 233, 0.12);
+  color: #0284c7;
+  border-color: rgba(14, 165, 233, 0.32);
+}
+
+.admin-status-badge.ul-active::before {
+  animation: ulPulseDot 1.8s infinite;
+}
+
+@keyframes ulPulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.admin-status-badge.ul-cancelled {
+  background: var(--admin-error-bg);
+  color: var(--admin-error);
+  border-color: var(--admin-error-border);
+}
+
+/* ---------- Filter Bar Subheader & Active Counter ---------- */
+
+.ul-filter-meta-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: var(--admin-bg-tertiary);
+  border-bottom: 1px solid var(--admin-border);
+  font-size: 12.5px;
+  color: var(--admin-text-secondary);
+}
+
+.ul-filter-meta-count {
+  font-weight: 700;
+  color: var(--admin-text-primary);
+}
+
+.ul-filter-active-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--admin-accent);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* ---------- Table cells ---------- */
+
+.ul-table td {
+  vertical-align: middle;
+}
+
+.ul-log-id {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--admin-accent-strong);
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ul-student-cell {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 180px;
+}
+
+.ul-student-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--admin-ink-gradient);
+  color: var(--admin-text-inverse);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ul-student-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  white-space: nowrap;
+}
+
+.ul-student-email {
+  font-size: 11.5px;
+  color: var(--admin-text-muted);
+  white-space: nowrap;
+}
+
+.ul-equipment-cell {
+  min-width: 170px;
+}
+
+.ul-equipment-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  white-space: nowrap;
+}
+
+.ul-equipment-cat {
+  font-size: 11.5px;
+  color: var(--admin-text-muted);
+}
+
+.ul-lab-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--admin-bg-secondary);
+  border: 1px solid var(--admin-border);
+  color: var(--admin-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.ul-nowrap {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.ul-time-cell {
+  font-size: 13px;
+  color: var(--admin-text-secondary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.ul-time-active {
+  color: #0284c7;
+  font-weight: 600;
+}
+
+.ul-duration-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: var(--admin-bg-secondary);
+  color: var(--admin-text-primary);
+  border: 1px solid var(--admin-border);
+}
+
+.ul-duration-badge.active {
+  background: rgba(14, 165, 233, 0.1);
+  color: #0284c7;
+  border-color: rgba(14, 165, 233, 0.25);
+}
+
+.ul-duration-badge.cancelled {
+  background: var(--admin-bg-secondary);
+  color: var(--admin-text-muted);
+  border-color: var(--admin-border);
+}
+
+.ul-table tbody tr.row-active {
+  background: rgba(14, 165, 233, 0.035);
+}
+
+.ul-table tbody tr.row-active:hover {
+  background: rgba(14, 165, 233, 0.07);
+}
+
+/* ---------- Row actions ---------- */
+
+.ul-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 8px;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border-strong);
+  color: var(--admin-text-primary);
+  cursor: pointer;
+  transition: all var(--admin-transition);
+}
+
+.ul-view-btn:hover {
+  background: var(--admin-surface-hover-strong);
+  color: var(--admin-accent);
+  border-color: var(--admin-accent-border);
+  transform: translateY(-1px);
+}
+
+/* ---------- View Modal ---------- */
+
+.ul-view-modal {
+  max-width: 660px;
+}
+
+.ul-modal-time-box {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  background: var(--admin-bg-tertiary);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  padding: 16px 18px;
+}
+
+.ul-modal-time-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ul-modal-time-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--admin-text-muted);
+}
+
+.ul-modal-time-label.actual {
+  color: var(--admin-accent);
+}
+
+.ul-modal-time-range {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--admin-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.ul-modal-time-meta {
+  font-size: 12px;
+  color: var(--admin-text-muted);
+}
+
+.ul-modal-time-meta.highlight {
+  color: var(--admin-success);
+  font-weight: 600;
+}
+
+.ul-detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.ul-detail-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--admin-text-muted);
+  margin: 0;
+}
+
+.ul-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px 20px;
+}
+
+.ul-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ul-detail-item.full-width {
+  grid-column: span 2;
+}
+
+.ul-detail-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--admin-text-muted);
+}
+
+.ul-detail-value {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  line-height: 1.4;
+}
+
+.ul-detail-subvalue {
+  font-size: 12px;
+  color: var(--admin-text-secondary);
+}
+
+.ul-cancellation-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--admin-error-bg);
+  border: 1px solid var(--admin-error-border);
+  border-radius: var(--admin-radius);
+  color: var(--admin-error);
+}
+
+.ul-cancellation-callout-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ul-cancellation-callout-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 2px;
+}
+
+.ul-cancellation-callout-text {
+  font-size: 13.5px;
+  margin: 0;
+  line-height: 1.45;
+  color: var(--admin-text-primary);
+}
+
+/* ---------- Toast Notification ---------- */
+
+.ul-toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--admin-ink);
+  color: var(--admin-text-inverse);
+  padding: 12px 22px;
+  border-radius: 13px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: var(--admin-shadow-lg);
+  z-index: 1100;
+  animation: ulToastIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+@keyframes ulToastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.ul-toast svg {
+  color: #7fc391;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1024px) {
+  .ul-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ul-modal-time-box {
+    grid-template-columns: 1fr;
+  }
+
+  .ul-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ul-detail-item.full-width {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .ul-summary-grid {
+    grid-template-columns: 1fr;
+  }
+  .ul-student-cell {
+    min-width: 150px;
+  }
+
+  .ul-modal-footer {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+
+  .ul-modal-footer .admin-btn {
+    width: 100%;
+  }
+}

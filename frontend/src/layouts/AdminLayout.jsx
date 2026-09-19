@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import AdminSidebar from '../components/admin/AdminSidebar';
 import AdminHeader from '../components/admin/AdminHeader';
+import '../styles/admin.css';
 import './AdminLayout.css';
 
 const titles = {

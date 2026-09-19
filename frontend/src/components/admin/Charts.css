@@ -1,0 +1,353 @@
+/* ============================================================
+   CHART PRIMITIVES — SVG/CSS charts styled with admin tokens
+   ============================================================ */
+
+.chart-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.chart-grid {
+  stroke: var(--admin-border);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  opacity: 0.8;
+}
+
+.chart-tick {
+  fill: var(--admin-text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.chart-line {
+  stroke: var(--admin-accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.chart-dot {
+  fill: var(--admin-surface);
+  stroke: var(--admin-accent);
+  stroke-width: 2.5;
+  transition: r var(--admin-transition);
+}
+
+.chart-dot.active {
+  stroke-width: 3;
+}
+
+.chart-cursor {
+  stroke: var(--admin-accent-border);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+
+.chart-value {
+  fill: var(--admin-text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+}
+
+.chart-bar {
+  transition: opacity var(--admin-transition), filter var(--admin-transition);
+}
+
+.chart-bar.accent {
+  fill: var(--admin-accent);
+  opacity: 0.85;
+}
+
+.chart-bar.blue {
+  fill: var(--admin-info);
+  opacity: 0.8;
+}
+
+.chart-bar.active {
+  opacity: 1;
+  filter: brightness(1.08);
+}
+
+/* ---------- Tooltip ---------- */
+
+.chart-tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 12px));
+  background: var(--admin-ink);
+  color: var(--admin-text-inverse);
+  padding: 7px 12px;
+  border-radius: 9px;
+  font-size: 12px;
+  line-height: 1.35;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  pointer-events: none;
+  box-shadow: var(--admin-shadow);
+  white-space: nowrap;
+  z-index: 10;
+}
+
+.chart-tooltip strong {
+  font-weight: 700;
+  opacity: 0.75;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.chart-tooltip span {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+/* ---------- Horizontal utilization bars ---------- */
+
+.utilbars {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.utilbar-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) 1fr auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.utilbar-row:has(.utilbar-meta) {
+  grid-template-columns: minmax(140px, 220px) 1fr auto auto;
+}
+
+.utilbar-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.utilbar-track {
+  height: 9px;
+  border-radius: 5px;
+  background: var(--admin-bg-secondary);
+  overflow: hidden;
+  display: block;
+}
+
+.utilbar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  background: var(--admin-accent-gradient);
+  transition: width 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.utilbar-fill.tone-success {
+  background: linear-gradient(90deg, #3e7c4f, #57976a);
+}
+
+.utilbar-fill.tone-warning {
+  background: linear-gradient(90deg, #a16207, #c08a2d);
+}
+
+.utilbar-fill.tone-danger {
+  background: linear-gradient(90deg, #b4432f, #cc6a52);
+}
+
+.utilbar-value {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--admin-text-primary);
+  font-variant-numeric: tabular-nums;
+  min-width: 44px;
+  text-align: right;
+}
+
+.utilbar-meta {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--admin-text-muted);
+  min-width: 56px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Donut chart ---------- */
+
+.donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.donut-chart {
+  position: relative;
+  width: 170px;
+  flex-shrink: 0;
+}
+
+.donut-chart svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  transform: rotate(0deg);
+}
+
+.donut-track {
+  fill: none;
+  stroke: var(--admin-bg-secondary);
+  stroke-width: 5.5;
+}
+
+.donut-seg {
+  fill: none;
+  stroke-width: 5.5;
+  transition: opacity var(--admin-transition), stroke-width var(--admin-transition);
+  cursor: pointer;
+}
+
+.donut-seg:hover {
+  stroke-width: 6.5;
+  opacity: 0.88;
+}
+
+.donut-seg.tone-success {
+  stroke: #3e7c4f;
+}
+
+.donut-seg.tone-pending {
+  stroke: #c08a2d;
+}
+
+.donut-seg.tone-danger {
+  stroke: #b4432f;
+}
+
+.donut-seg.tone-muted {
+  stroke: #a39a8d;
+}
+
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+  padding: 0 30px;
+}
+
+.donut-center strong {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--admin-text-primary);
+  letter-spacing: -0.02em;
+}
+
+.donut-center span {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--admin-text-muted);
+  margin-top: 2px;
+}
+
+.donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  flex: 1;
+  min-width: 160px;
+}
+
+.donut-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  padding: 3px 6px;
+  border-radius: 8px;
+  transition: background var(--admin-transition);
+  cursor: default;
+}
+
+.donut-legend-item.active {
+  background: var(--admin-surface-hover);
+}
+
+.donut-legend-item i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.donut-legend-item i.tone-success {
+  background: #3e7c4f;
+}
+
+.donut-legend-item i.tone-pending {
+  background: #c08a2d;
+}
+
+.donut-legend-item i.tone-danger {
+  background: #b4432f;
+}
+
+.donut-legend-item i.tone-muted {
+  background: #a39a8d;
+}
+
+.donut-legend-label {
+  flex: 1;
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+}
+
+.donut-legend-value {
+  font-weight: 700;
+  color: var(--admin-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Legend dots (shared) ---------- */
+
+@media (max-width: 640px) {
+  .utilbar-row,
+  .utilbar-row:has(.utilbar-meta) {
+    grid-template-columns: 1fr auto;
+  }
+
+  .utilbar-row .utilbar-track {
+    display: none;
+  }
+
+  .utilbar-row:has(.utilbar-meta) {
+    grid-template-columns: 1fr auto auto;
+  }
+
+  .utilbar-row:has(.utilbar-meta) .utilbar-track {
+    display: none;
+  }
+
+  .donut-wrap {
+    justify-content: center;
+  }
+}
