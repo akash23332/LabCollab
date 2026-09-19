@@ -1,7 +1,25 @@
+<<<<<<< Updated upstream
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+=======
+import Navbar from './components/layout/Navbar'
+import Footer from './components/layout/Footer'
+import Hero from './components/landing/Hero'
+import StatsBar from './components/landing/StatsBar'
+import FeaturesGrid from './components/landing/FeaturesGrid'
+import NetworkSection from './components/landing/NetworkSection'
+import DarkCTA from './components/landing/DarkCTA'
+import { stats } from './data/landingData'
+import { AuthProvider, useAuth } from './context/AuthContext'
+import LoginModal from './components/auth/LoginModal'
+import UserLayout from './layouts/UserLayout'
+import UserDashboard from './pages/user/Dashboard'
+import FindEquipment from './pages/user/FindEquipment'
+import AISearch from './pages/user/AISearch'
+import LabNetwork from './pages/user/LabNetwork'
+>>>>>>> Stashed changes
 
 // Teammate's landing page
 import Landing from './pages/public/Landing';
@@ -36,11 +54,17 @@ function StudentDashboardWrapper() {
         </UserLayout>
       );
     case 'ai-search':
+<<<<<<< Updated upstream
       return (
         <UserLayout>
           <AISearch />
         </UserLayout>
       );
+=======
+      return <AISearch />
+    case 'network':
+      return <LabNetwork />
+>>>>>>> Stashed changes
     case 'overview':
     default:
       return (
