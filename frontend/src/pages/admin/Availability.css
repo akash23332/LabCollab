@@ -1,0 +1,759 @@
+/* ============================================================
+   AVAILABILITY PAGE
+   Timeline, week view, modals — uses shared admin.css tokens
+   ============================================================ */
+
+.admin-availability-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ---------- Equipment selector + info bar ---------- */
+
+.avail-equipment-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 24px;
+  padding: 20px 24px;
+  flex-wrap: wrap;
+}
+
+.avail-equipment-select {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 260px;
+  flex: 0 0 auto;
+}
+
+.avail-equipment-select .admin-form-select {
+  min-width: 260px;
+}
+
+.avail-equipment-divider {
+  width: 1px;
+  background: var(--admin-border);
+  align-self: stretch;
+}
+
+.avail-equipment-info {
+  flex: 1;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.avail-equipment-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.avail-equipment-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  background: var(--admin-accent-bg);
+  color: var(--admin-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.avail-equipment-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--admin-text-primary);
+  margin: 0 0 2px;
+  letter-spacing: -0.01em;
+}
+
+.avail-equipment-number {
+  font-size: 12.5px;
+  color: var(--admin-text-muted);
+  margin: 0;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.avail-equipment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.avail-equipment-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--admin-text-secondary);
+}
+
+.avail-equipment-meta-item svg {
+  color: var(--admin-text-muted);
+}
+
+.avail-equipment-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.avail-equipment-badge-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.avail-equipment-badge-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--admin-text-muted);
+}
+
+/* ---------- Summary grid ---------- */
+
+.avail-summary-grid {
+  margin-bottom: 0;
+}
+
+/* ---------- Schedule card ---------- */
+
+.avail-schedule-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.avail-schedule-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--admin-border);
+  flex-wrap: wrap;
+}
+
+.avail-date-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.avail-nav-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border-strong);
+  color: var(--admin-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--admin-transition);
+}
+
+.avail-nav-btn:hover {
+  background: var(--admin-surface-hover);
+  color: var(--admin-text-primary);
+  border-color: var(--admin-border-hover);
+}
+
+.avail-date-display {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px;
+  color: var(--admin-text-primary);
+}
+
+.avail-date-display svg {
+  color: var(--admin-accent);
+}
+
+.avail-date-text {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.avail-today-btn {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+.avail-today-btn.is-today {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Day / Week toggle */
+.avail-view-toggle {
+  display: inline-flex;
+  background: var(--admin-bg-secondary);
+  border: 1px solid var(--admin-border-strong);
+  border-radius: 11px;
+  padding: 3px;
+  margin-left: 6px;
+}
+
+.avail-view-toggle button {
+  padding: 7px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--admin-text-secondary);
+  cursor: pointer;
+  transition: all var(--admin-transition);
+}
+
+.avail-view-toggle button.active {
+  background: var(--admin-surface);
+  color: var(--admin-text-primary);
+  box-shadow: var(--admin-shadow-xs);
+}
+
+/* Legend */
+.avail-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.avail-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+}
+
+.avail-legend-item i {
+  width: 11px;
+  height: 11px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.avail-legend-item i.available {
+  background: #3e7c4f;
+}
+
+.avail-legend-item i.booked {
+  background: #556789;
+}
+
+.avail-legend-item i.blocked {
+  background: #a16207;
+}
+
+.avail-legend-item i.maintenance {
+  background: #b4432f;
+}
+
+/* ---------- Day timeline ---------- */
+
+.avail-timeline {
+  display: flex;
+  height: 560px;
+  margin: 20px 24px 24px;
+  gap: 12px;
+}
+
+.avail-timeline-gutter {
+  width: 56px;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avail-timeline-gutter span {
+  position: absolute;
+  right: 0;
+  transform: translateY(-6px);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--admin-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.avail-timeline-track {
+  flex: 1;
+  position: relative;
+  background: var(--admin-bg-tertiary);
+  border: 1px solid var(--admin-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.avail-hour-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--admin-border);
+  opacity: 0.7;
+}
+
+/* Now indicator */
+.avail-now-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--admin-accent);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.avail-now-dot {
+  position: absolute;
+  left: -4px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--admin-accent);
+  box-shadow: 0 0 0 3px var(--admin-accent-bg);
+}
+
+.avail-now-time {
+  position: absolute;
+  right: 8px;
+  top: -9px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--admin-accent);
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-accent-border);
+  border-radius: 9999px;
+  padding: 2px 8px;
+}
+
+/* Slot blocks */
+.avail-block {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  border-radius: 11px;
+  padding: 9px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  border: 1px solid transparent;
+  transition: box-shadow var(--admin-transition), transform var(--admin-transition);
+}
+
+.avail-block:hover {
+  box-shadow: var(--admin-shadow);
+  transform: translateY(-1px);
+  z-index: 4;
+}
+
+.avail-block-status {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.avail-block-time {
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.avail-block-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Status palettes — warm, matching the badge system */
+.avail-block.available {
+  background: var(--admin-success-bg);
+  border-color: var(--admin-success-border);
+  color: var(--admin-success);
+}
+
+.avail-block.booked {
+  background: var(--admin-info-bg);
+  border-color: var(--admin-info-border);
+  color: var(--admin-info);
+}
+
+.avail-block.blocked {
+  background: var(--admin-warning-bg);
+  border-color: var(--admin-warning-border);
+  color: var(--admin-warning);
+}
+
+.avail-block.maintenance {
+  background: var(--admin-error-bg);
+  border-color: var(--admin-error-border);
+  color: var(--admin-error);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 7px,
+    rgba(180, 67, 47, 0.06) 7px,
+    rgba(180, 67, 47, 0.06) 14px
+  );
+}
+
+/* Compact blocks for week view */
+.avail-block.compact {
+  left: 3px;
+  right: 3px;
+  padding: 3px 7px;
+  border-radius: 7px;
+  justify-content: center;
+}
+
+.avail-block.compact .avail-block-status {
+  font-size: 8.5px;
+  letter-spacing: 0.04em;
+}
+
+.avail-block.compact .avail-block-time {
+  display: none;
+}
+
+.avail-block.compact .avail-block-note {
+  display: none;
+}
+
+/* Empty day */
+.avail-empty-day {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--admin-text-muted);
+  text-align: center;
+  padding: 24px;
+}
+
+.avail-empty-day p {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+  margin: 0;
+}
+
+.avail-empty-day span {
+  font-size: 13px;
+}
+
+/* ---------- Week view ---------- */
+
+.avail-week {
+  padding: 18px 24px 24px;
+}
+
+.avail-week-header {
+  margin-bottom: 12px;
+}
+
+.avail-week-range {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+}
+
+.avail-week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+}
+
+.avail-week-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 8px 8px;
+  background: var(--admin-bg-tertiary);
+  border: 1px solid var(--admin-border);
+  border-radius: 13px;
+  cursor: pointer;
+  text-align: center;
+  transition: all var(--admin-transition);
+  font-family: inherit;
+  min-height: 220px;
+}
+
+.avail-week-col:hover {
+  border-color: var(--admin-border-hover);
+  box-shadow: var(--admin-shadow-xs);
+}
+
+.avail-week-col.selected {
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 0 3px var(--admin-accent-bg);
+}
+
+.avail-week-col-day {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--admin-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.avail-week-today-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--admin-accent);
+  display: inline-block;
+}
+
+.avail-week-col-date {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--admin-text-primary);
+  margin-bottom: 4px;
+}
+
+.avail-week-col-body {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  align-self: stretch;
+  display: block;
+  border-radius: 9px;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  overflow: hidden;
+  min-height: 120px;
+}
+
+.avail-week-col-body .avail-hour-line {
+  opacity: 0.5;
+}
+
+/* ---------- Bookings list ---------- */
+
+.avail-bookings-count {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--admin-text-muted);
+}
+
+.avail-bookings-list {
+  padding: 6px 24px 14px;
+}
+
+.avail-booking-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--admin-border);
+  flex-wrap: wrap;
+}
+
+.avail-booking-row:last-child {
+  border-bottom: none;
+}
+
+.avail-booking-when {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 130px;
+}
+
+.avail-booking-date {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--admin-text-primary);
+}
+
+.avail-booking-time {
+  font-size: 12.5px;
+  color: var(--admin-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.avail-booking-who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.avail-booking-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--admin-ink-gradient);
+  color: var(--admin-text-inverse);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.avail-booking-student {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  margin: 0 0 2px;
+}
+
+.avail-booking-inst {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--admin-text-muted);
+  margin: 0;
+}
+
+.avail-booking-purpose {
+  flex: 1.4;
+  min-width: 180px;
+  font-size: 13.5px;
+  color: var(--admin-text-secondary);
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ---------- Modal tweaks ---------- */
+
+.avail-modal {
+  max-width: 560px;
+}
+
+.avail-status-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 12px 14px;
+  background: var(--admin-success-bg);
+  border: 1px solid var(--admin-success-border);
+  border-radius: 11px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--admin-text-secondary);
+}
+
+.avail-status-note svg {
+  color: var(--admin-success);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.avail-status-note strong {
+  color: var(--admin-success);
+  font-weight: 700;
+}
+
+.avail-field-error {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--admin-error);
+  margin: 0;
+}
+
+/* ---------- Toast ---------- */
+
+.avail-toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--admin-ink);
+  color: var(--admin-text-inverse);
+  padding: 12px 20px;
+  border-radius: 13px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: var(--admin-shadow-lg);
+  z-index: 1100;
+  animation: availToastIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes availToastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.avail-toast.success svg {
+  color: #7fc391;
+}
+
+/* ---------- Responsive (tablet) ---------- */
+
+@media (max-width: 1024px) {
+  .avail-timeline {
+    margin: 16px 16px 16px;
+    height: 480px;
+  }
+
+  .avail-week-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .avail-equipment-divider {
+    display: none;
+  }
+
+  .avail-schedule-toolbar {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .avail-week-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .avail-booking-purpose {
+    flex-basis: 100%;
+  }
+
+  .avail-timeline-gutter {
+    width: 44px;
+  }
+}

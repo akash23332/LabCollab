@@ -1,0 +1,59 @@
+/* ============================================================
+   ADMIN LAYOUT — canvas & shell
+   ============================================================ */
+
+.admin-layout {
+  min-height: 100vh;
+  background: var(--admin-bg);
+  color: var(--admin-text-primary);
+  display: flex;
+}
+
+.admin-sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(43, 35, 24, 0.45);
+  backdrop-filter: blur(2px);
+  z-index: 99;
+  animation: overlayIn 160ms ease;
+}
+
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.admin-main {
+  flex: 1;
+  margin-left: var(--admin-sidebar-width);
+  min-height: 100vh;
+  min-width: 0; /* allow children (e.g. wide tables) to shrink and scroll internally */
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-content {
+  flex: 1;
+  padding: 28px 32px 48px;
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1024px) {
+  .admin-main {
+    margin-left: 0;
+  }
+
+  .admin-sidebar-overlay {
+    display: block;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-content {
+    padding: 16px 16px 40px;
+  }
+}

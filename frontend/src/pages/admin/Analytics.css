@@ -1,0 +1,237 @@
+/* ============================================================
+   ANALYTICS PAGE
+   Read-only reporting layer over the shared design system
+   ============================================================ */
+
+.admin-analytics-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ---------- Header ---------- */
+
+.analytics-range-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px 0 14px;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border-strong);
+  border-radius: var(--admin-radius);
+  box-shadow: var(--admin-shadow-xs);
+}
+
+.analytics-range-select svg {
+  color: var(--admin-text-muted);
+  flex-shrink: 0;
+}
+
+.analytics-range-select .admin-filter-select {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding-left: 0;
+  font-weight: 600;
+}
+
+.analytics-card-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--admin-text-muted);
+}
+
+/* ---------- Layout grid ---------- */
+
+.analytics-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 20px;
+}
+
+.analytics-grid-2 > .admin-card {
+  margin-bottom: 0;
+}
+
+.analytics-chart-card .analytics-card-body {
+  padding: 20px 20px 12px;
+}
+
+.analytics-card-body {
+  padding: 22px 24px;
+}
+
+/* ---------- Performance table ---------- */
+
+.analytics-eq-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  white-space: nowrap;
+}
+
+.analytics-eq-cat {
+  font-size: 11.5px;
+  color: var(--admin-text-muted);
+}
+
+.analytics-num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.analytics-util-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid transparent;
+}
+
+.analytics-util-chip::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.analytics-util-chip.high {
+  background: var(--admin-success-bg);
+  color: var(--admin-success);
+  border-color: var(--admin-success-border);
+}
+
+.analytics-util-chip.mid {
+  background: var(--admin-warning-bg);
+  color: var(--admin-warning);
+  border-color: var(--admin-warning-border);
+}
+
+.analytics-util-chip.low {
+  background: var(--admin-bg-secondary);
+  color: var(--admin-text-secondary);
+  border-color: var(--admin-border-strong);
+}
+
+/* ---------- Peak usage cards ---------- */
+
+.analytics-peak-grid {
+  margin-top: 0;
+}
+
+.analytics-peak-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 22px;
+  border-radius: var(--admin-radius-xl);
+  border: 1px solid var(--admin-border);
+  background: var(--admin-surface);
+  box-shadow: var(--admin-shadow-sm);
+}
+
+.analytics-peak-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.analytics-peak-icon.peak {
+  background: var(--admin-success-bg);
+  color: var(--admin-success);
+}
+
+.analytics-peak-icon.lowest {
+  background: var(--admin-warning-bg);
+  color: var(--admin-warning);
+}
+
+.analytics-peak-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--admin-text-muted);
+  margin-bottom: 3px;
+}
+
+.analytics-peak-value {
+  display: block;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--admin-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.analytics-peak-meta {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+  margin-top: 2px;
+}
+
+/* ---------- Toast ---------- */
+
+.analytics-toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--admin-ink);
+  color: var(--admin-text-inverse);
+  padding: 12px 20px;
+  border-radius: 13px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: var(--admin-shadow-lg);
+  z-index: 1100;
+  animation: analyticsToastIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.analytics-toast svg {
+  color: #7fc391;
+}
+
+@keyframes analyticsToastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1024px) {
+  .analytics-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .analytics-peak-card {
+    padding: 16px;
+  }
+
+  .analytics-peak-value {
+    font-size: 15px;
+  }
+}
