@@ -67,11 +67,11 @@ export default function UserSidebar() {
                     onClick={() => setActiveTab(item.id)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                       isActive
-                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 shadow-sm'
+                        ? 'bg-[#C58A48]/20 text-[#F7ECD9] border border-[#C58A48]/50 shadow-sm'
                         : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                     }`}
                   >
-                    <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-emerald-400' : 'text-slate-400'}`} />
+                    <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-[#C58A48]' : 'text-slate-400'}`} />
                     <span className="truncate">{item.label}</span>
                   </button>
                 )
@@ -94,11 +94,11 @@ export default function UserSidebar() {
                     onClick={() => setActiveTab(item.id)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all ${
                       isActive
-                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 shadow-sm'
+                        ? 'bg-[#C58A48]/20 text-[#F7ECD9] border border-[#C58A48]/50 shadow-sm'
                         : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                     }`}
                   >
-                    <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-emerald-400' : 'text-slate-400'}`} />
+                    <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-[#C58A48]' : 'text-slate-400'}`} />
                     <span className="truncate">{item.label}</span>
                   </button>
                 )

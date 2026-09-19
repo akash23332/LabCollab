@@ -11,6 +11,7 @@ import LoginModal from './components/auth/LoginModal'
 import UserLayout from './layouts/UserLayout'
 import UserDashboard from './pages/user/Dashboard'
 import FindEquipment from './pages/user/FindEquipment'
+import AISearch from './pages/user/AISearch'
 
 function DashboardContent() {
   const { activeTab } = useAuth()
@@ -18,6 +19,8 @@ function DashboardContent() {
   switch (activeTab) {
     case 'explore':
       return <FindEquipment />
+    case 'ai-search':
+      return <AISearch />
     case 'overview':
     default:
       return <UserDashboard />
