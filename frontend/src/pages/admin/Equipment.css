@@ -1,0 +1,10 @@
+/* ============================================================
+   EQUIPMENT PAGE — page-specific styles only
+   (shared primitives live in styles/admin.css)
+   ============================================================ */
+
+.admin-equipment-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}

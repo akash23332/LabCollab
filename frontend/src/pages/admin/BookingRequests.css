@@ -1,0 +1,384 @@
+/* ============================================================
+   BOOKING REQUESTS PAGE
+   Uses shared admin.css tokens & primitives
+   ============================================================ */
+
+.admin-booking-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.br-summary-grid {
+  margin-bottom: 0;
+}
+
+/* ---------- Header search ---------- */
+
+.br-header-search {
+  position: relative;
+  display: inline-flex;
+}
+
+/* ---------- Status badges ---------- */
+
+.admin-status-badge.br-pending {
+  background: var(--admin-warning-bg);
+  color: var(--admin-warning);
+  border-color: var(--admin-warning-border);
+}
+
+.admin-status-badge.br-approved {
+  background: var(--admin-success-bg);
+  color: var(--admin-success);
+  border-color: var(--admin-success-border);
+}
+
+.admin-status-badge.br-rejected {
+  background: var(--admin-error-bg);
+  color: var(--admin-error);
+  border-color: var(--admin-error-border);
+}
+
+/* ---------- Table cells ---------- */
+
+.br-table td {
+  vertical-align: middle;
+}
+
+.br-request-id {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--admin-accent-strong);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.br-student-cell {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 190px;
+}
+
+.br-student-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--admin-ink-gradient);
+  color: var(--admin-text-inverse);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.br-student-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  white-space: nowrap;
+}
+
+.br-student-email {
+  font-size: 11.5px;
+  color: var(--admin-text-muted);
+  white-space: nowrap;
+}
+
+.br-equipment-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  white-space: nowrap;
+}
+
+.br-equipment-cat {
+  font-size: 11.5px;
+  color: var(--admin-text-muted);
+}
+
+.br-nowrap {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.br-purpose {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--admin-text-secondary);
+}
+
+/* ---------- Row actions ---------- */
+
+.br-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-action-btn.approve:hover {
+  background: var(--admin-success-bg);
+  color: var(--admin-success);
+  border-color: var(--admin-success-border);
+}
+
+.admin-action-btn.reject:hover {
+  background: var(--admin-error-bg);
+  color: var(--admin-error);
+  border-color: var(--admin-error-border);
+}
+
+/* ---------- View modal ---------- */
+
+.br-view-modal {
+  max-width: 640px;
+}
+
+.br-view-subtitle {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--admin-text-muted);
+  margin: 3px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.br-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px 24px;
+}
+
+.br-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.br-detail-item.br-detail-full {
+  grid-column: span 2;
+}
+
+.br-detail-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--admin-text-muted);
+}
+
+.br-detail-label svg {
+  color: var(--admin-accent);
+}
+
+.br-detail-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--admin-text-primary);
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.br-detail-value small {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--admin-text-secondary);
+}
+
+.br-rejection-note {
+  display: block;
+  padding: 12px 14px;
+  background: var(--admin-error-bg);
+  border: 1px solid var(--admin-error-border);
+  border-radius: 11px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--admin-error);
+  line-height: 1.5;
+}
+
+/* ---------- Approve confirmation ---------- */
+
+.br-approve-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--admin-success-bg);
+  color: var(--admin-success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.br-confirm-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--admin-bg-tertiary);
+  border: 1px solid var(--admin-border);
+  border-radius: 13px;
+  padding: 16px 18px;
+  margin: 4px 0 12px;
+  text-align: left;
+}
+
+.br-confirm-summary div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.br-confirm-summary span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--admin-text-muted);
+}
+
+.br-confirm-summary strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--admin-text-primary);
+  text-align: right;
+}
+
+.br-approve-note {
+  font-size: 12.5px;
+  color: var(--admin-success);
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+/* ---------- Reject modal ---------- */
+
+.br-reject-modal {
+  max-width: 520px;
+}
+
+.br-reject-context {
+  display: flex;
+  gap: 32px;
+  padding: 14px 16px;
+  background: var(--admin-bg-tertiary);
+  border: 1px solid var(--admin-border);
+  border-radius: 13px;
+  margin-bottom: 18px;
+}
+
+.br-reject-context div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.br-reject-context span {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--admin-text-muted);
+}
+
+.br-reject-context strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--admin-text-primary);
+}
+
+.br-field-error {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--admin-error);
+  margin: 0;
+}
+
+/* ---------- Toast ---------- */
+
+.br-toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--admin-ink);
+  color: var(--admin-text-inverse);
+  padding: 12px 20px;
+  border-radius: 13px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: var(--admin-shadow-lg);
+  z-index: 1100;
+  animation: brToastIn 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes brToastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.br-toast.success svg {
+  color: #7fc391;
+}
+
+.br-toast.error svg {
+  color: #e08a7a;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1024px) {
+  .br-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .br-detail-item.br-detail-full {
+    grid-column: span 1;
+  }
+
+  .br-purpose {
+    max-width: 150px;
+  }
+}
+
+@media (max-width: 640px) {
+  .br-student-cell {
+    min-width: 150px;
+  }
+
+  .br-purpose {
+    max-width: 120px;
+  }
+
+  .br-reject-context {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .br-confirm-summary div {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .br-confirm-summary strong {
+    text-align: left;
+  }
+}
