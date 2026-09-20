@@ -464,29 +464,51 @@ export default function FindEquipment() {
             else if (rawCat.includes('chem')) categorySlug = 'chemical'
             else if (rawCat.includes('comp') || rawCat.includes('ai')) categorySlug = 'computing'
 
+            // Format location as clean string
+            let locStr = 'Campus Lab'
+            if (typeof item.location === 'string' && item.location) {
+              locStr = item.location
+            } else if (item.labName) {
+              locStr = item.labName
+            } else if (item.location && typeof item.location === 'object') {
+              locStr = [item.location.building, item.location.city].filter(Boolean).join(', ') || 'Campus Lab'
+            }
+
+            // Format institution as clean string
+            let instStr = 'Chitkara University'
+            if (typeof item.collegeName === 'string' && item.collegeName) {
+              instStr = item.collegeName
+            } else if (typeof item.institution === 'string' && item.institution) {
+              instStr = item.institution
+            } else if (typeof item.collegeId === 'string' && item.collegeId) {
+              instStr = item.collegeId
+            }
+
             return {
               id: item.equipmentId || item._id,
-              title: item.equipmentName || item.title,
+              title: item.equipmentName || item.title || item.name || 'Scientific Instrument',
               category: categorySlug,
-              categoryLabel: item.category,
-              institution: item.collegeName || item.institution || 'Chitkara University',
-              location: item.location || item.labName || 'Campus Lab',
-              state: item.state || 'Punjab',
+              categoryLabel: item.category || 'General',
+              institution: instStr,
+              location: locStr,
+              state: item.state || (typeof item.location === 'object' ? item.location?.state : null) || 'Punjab',
               availability: item.status === 'Available' ? 'Available Today' : (item.status || 'Available'),
               availType: item.status === 'Available' ? 'today' : 'limited',
               badgeClass: item.status === 'Available'
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                 : 'bg-amber-50 text-amber-700 border-amber-200',
               dotClass: item.status === 'Available' ? 'bg-emerald-500' : 'bg-amber-500',
-              tags: item.tags?.length ? item.tags : (item.capabilities?.slice(0, 3) || ['Verified', 'Research Grade']),
-              price: item.price || 500,
-              priceLabel: item.priceLabel || `₹${item.price || 500}`,
+              tags: Array.isArray(item.tags) && item.tags.length 
+                ? item.tags 
+                : (Array.isArray(item.capabilities) && item.capabilities.length ? item.capabilities.slice(0, 3) : ['Verified', 'Research Grade']),
+              price: item.price || item.pricePerHour || 500,
+              priceLabel: item.priceLabel || `₹${item.price || item.pricePerHour || 500}`,
               rating: item.rating || 4.8,
               operator: item.operator || 'Self-Operated (Trained)',
               specs: typeof item.specifications === 'string' 
                 ? (item.specifications || item.description || '') 
                 : (item.description || JSON.stringify(item.specifications || '')),
-              slotsToday: item.slotsToday?.length ? item.slotsToday : ['10:00 - 12:00', '14:00 - 16:00'],
+              slotsToday: Array.isArray(item.slotsToday) && item.slotsToday.length ? item.slotsToday : ['10:00 - 12:00', '14:00 - 16:00'],
               visualType: item.visualType || 'generic',
               demandPrediction: item.demandPrediction,
             }
@@ -547,13 +569,19 @@ export default function FindEquipment() {
   const filteredInstruments = useMemo(() => {
     return instruments.filter(item => {
       // Search text match
-      const q = searchQuery.toLowerCase()
+      const q = (searchQuery || '').toLowerCase()
+      const title = String(item.title || item.name || '').toLowerCase()
+      const inst = String(item.institution || '').toLowerCase()
+      const loc = String(item.location || '').toLowerCase()
+      const tags = Array.isArray(item.tags) ? item.tags : []
+      const specs = String(item.specs || '').toLowerCase()
+
       const matchesSearch = !q || 
-        item.title.toLowerCase().includes(q) ||
-        item.institution.toLowerCase().includes(q) ||
-        item.location.toLowerCase().includes(q) ||
-        item.tags.some(t => t.toLowerCase().includes(q)) ||
-        item.specs.toLowerCase().includes(q)
+        title.includes(q) ||
+        inst.includes(q) ||
+        loc.includes(q) ||
+        tags.some(t => String(t).toLowerCase().includes(q)) ||
+        specs.includes(q)
 
       // Category match
       const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory
@@ -578,8 +606,8 @@ export default function FindEquipment() {
 
   // Institutions unique list
   const uniqueInstitutions = useMemo(() => {
-    return Array.from(new Set(instruments.map(i => i.institution)))
-  }, [])
+    return Array.from(new Set(instruments.map(i => String(i.institution || '')).filter(Boolean)))
+  }, [instruments])
 
   const handleIntentSubmit = (e) => {
     e.preventDefault()

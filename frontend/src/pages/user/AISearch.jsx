@@ -145,33 +145,53 @@ export default function AISearch() {
     try {
       const res = await equipmentService.searchAI(prompt.trim(), 8)
       if (res?.data && res.data.length > 0) {
-        const mapped = res.data.map((item, idx) => ({
-          id: item.equipmentId || item.id || item._id,
-          rank: String(idx + 1).padStart(2, '0'),
-          matchBadge: idx === 0 ? 'Best Match' : (idx === 1 ? 'High Relevance' : 'Good Alternative'),
-          badgeVariant: idx === 0 ? 'primary' : (idx === 1 ? 'secondary' : 'neutral'),
-          category: (item.category || 'EQUIPMENT').toUpperCase(),
-          name: item.equipmentName || item.name || 'Research Equipment',
-          description: item.description || (item.capabilities ? item.capabilities.join(', ') : 'High precision research equipment.'),
-          tags: item.tags?.length ? item.tags : (item.capabilities?.slice(0, 3) || ['Research Grade', 'Verified']),
-          institution: item.collegeName || item.institution || 'LabCollab Network',
-          location: item.location || item.labName || 'Campus Lab',
-          distance: `${(idx * 1.4 + 1.1).toFixed(1)} miles`,
-          price: item.price || 500,
-          unit: 'hour',
-          currency: '₹',
-          rating: item.rating || 4.8,
-          reviewsCount: 20 + idx * 5,
-          availability: item.status === 'Available' ? 'Available this week' : (item.status || 'Available'),
-          availStatus: item.status === 'Available' ? 'open' : 'scheduled',
-          image: item.image || (idx % 2 === 0 
-            ? 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=400&q=80'
-            : 'https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&w=400&q=80'),
-          specs: typeof item.specifications === 'object' && item.specifications !== null
-            ? item.specifications
-            : { details: String(item.specifications || item.description || '') },
-          slots: item.slotsToday?.length ? item.slotsToday : ['Today, 2:00 PM – 4:00 PM', 'Tomorrow, 10:00 AM – 1:00 PM']
-        }))
+        const mapped = res.data.map((item, idx) => {
+          let locStr = 'Campus Lab'
+          if (typeof item.location === 'string' && item.location) {
+            locStr = item.location
+          } else if (item.labName) {
+            locStr = item.labName
+          } else if (item.location && typeof item.location === 'object') {
+            locStr = [item.location.building, item.location.city].filter(Boolean).join(', ') || 'Campus Lab'
+          }
+
+          let instStr = 'LabCollab Network'
+          if (typeof item.collegeName === 'string' && item.collegeName) {
+            instStr = item.collegeName
+          } else if (typeof item.institution === 'string' && item.institution) {
+            instStr = item.institution
+          } else if (typeof item.collegeId === 'string' && item.collegeId) {
+            instStr = item.collegeId
+          }
+
+          return {
+            id: item.equipmentId || item.id || item._id,
+            rank: String(idx + 1).padStart(2, '0'),
+            matchBadge: idx === 0 ? 'Best Match' : (idx === 1 ? 'High Relevance' : 'Good Alternative'),
+            badgeVariant: idx === 0 ? 'primary' : (idx === 1 ? 'secondary' : 'neutral'),
+            category: (item.category || 'EQUIPMENT').toUpperCase(),
+            name: item.equipmentName || item.name || 'Research Equipment',
+            description: item.description || (Array.isArray(item.capabilities) ? item.capabilities.join(', ') : 'High precision research equipment.'),
+            tags: Array.isArray(item.tags) && item.tags.length ? item.tags : (Array.isArray(item.capabilities) && item.capabilities.length ? item.capabilities.slice(0, 3) : ['Research Grade', 'Verified']),
+            institution: instStr,
+            location: locStr,
+            distance: `${(idx * 1.4 + 1.1).toFixed(1)} miles`,
+            price: item.price || item.pricePerHour || 500,
+            unit: 'hour',
+            currency: '₹',
+            rating: item.rating || 4.8,
+            reviewsCount: 20 + idx * 5,
+            availability: item.status === 'Available' ? 'Available this week' : (item.status || 'Available'),
+            availStatus: item.status === 'Available' ? 'open' : 'scheduled',
+            image: item.image || (idx % 2 === 0 
+              ? 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=400&q=80'
+              : 'https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&w=400&q=80'),
+            specs: typeof item.specifications === 'object' && item.specifications !== null
+              ? item.specifications
+              : { details: String(item.specifications || item.description || '') },
+            slots: Array.isArray(item.slotsToday) && item.slotsToday.length ? item.slotsToday : ['Today, 2:00 PM – 4:00 PM', 'Tomorrow, 10:00 AM – 1:00 PM']
+          }
+        })
         setResults(mapped)
       } else {
         setResults(INITIAL_RESULTS)
