@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   TrendingUp,
   DollarSign,
@@ -22,50 +22,88 @@ import {
   AlertCircle
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import bookingService from '../../services/bookingService'
+
+const DEMO_REQUESTS = [
+  {
+    id: 'req-1',
+    avatar: 'MC',
+    name: 'Maya Chen',
+    institution: 'Tufts University',
+    instrument: 'Tektronix MSO54B',
+    subCategory: 'Oscilloscope',
+    dateTime: 'Oct 23, 2026 14:00',
+    duration: '2 hours',
+    status: 'pending' // 'pending' | 'approved' | 'rejected'
+  },
+  {
+    id: 'req-2',
+    avatar: 'JB',
+    name: 'Jon Bell',
+    institution: 'Boston University',
+    instrument: 'Agilent 8890 GC',
+    subCategory: 'Gas Chromatograph',
+    dateTime: 'Oct 24, 2026 09:00',
+    duration: '3 hours',
+    status: 'pending'
+  },
+  {
+    id: 'req-3',
+    avatar: 'AS',
+    name: 'Ari Singh',
+    institution: 'MIT.nano',
+    instrument: 'Bruker D8 Advance',
+    subCategory: 'X-ray Diffractometer',
+    dateTime: 'Oct 25, 2026 10:00',
+    duration: '2 hours',
+    status: 'approved'
+  }
+]
 
 export default function CommandCenter() {
-  const { setActiveTab } = useAuth()
+  const { user, setActiveTab } = useAuth()
+  const isDemoUser = !user || user.email === 'student@example.com' || user.email === 'demo@example.com'
   
   // Date range picker state
   const [dateRange, setDateRange] = useState('Oct 1, 2026 – Oct 31, 2026')
   const [showDateDropdown, setShowDateDropdown] = useState(false)
 
   // Booking Requests State (interactive approve / reject)
-  const [bookingRequests, setBookingRequests] = useState([
-    {
-      id: 'req-1',
-      avatar: 'MC',
-      name: 'Maya Chen',
-      institution: 'Tufts University',
-      instrument: 'Tektronix MSO54B',
-      subCategory: 'Oscilloscope',
-      dateTime: 'Oct 23, 2026 14:00',
-      duration: '2 hours',
-      status: 'pending' // 'pending' | 'approved' | 'rejected'
-    },
-    {
-      id: 'req-2',
-      avatar: 'JB',
-      name: 'Jon Bell',
-      institution: 'Boston University',
-      instrument: 'Agilent 8890 GC',
-      subCategory: 'Gas Chromatograph',
-      dateTime: 'Oct 24, 2026 09:00',
-      duration: '3 hours',
-      status: 'pending'
-    },
-    {
-      id: 'req-3',
-      avatar: 'AS',
-      name: 'Ari Singh',
-      institution: 'MIT.nano',
-      instrument: 'Bruker D8 Advance',
-      subCategory: 'X-ray Diffractometer',
-      dateTime: 'Oct 25, 2026 10:00',
-      duration: '2 hours',
-      status: 'approved'
+  const [bookingRequests, setBookingRequests] = useState(isDemoUser ? DEMO_REQUESTS : [])
+  const [loadingRequests, setLoadingRequests] = useState(true)
+
+  useEffect(() => {
+    const fetchLiveBookings = async () => {
+      try {
+        setLoadingRequests(true)
+        const res = await bookingService.getBookings()
+        if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
+          const mapped = res.data.map((b) => ({
+            id: b.bookingId || b.id || b._id,
+            avatar: b.student?.avatar || (b.student?.name ? b.student.name.split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase() : 'ST'),
+            name: b.student?.name || 'Researcher',
+            institution: b.college || b.institution || 'Partner Lab',
+            instrument: b.equipmentName,
+            subCategory: b.equipmentCategory || 'Equipment',
+            dateTime: `${b.date} ${b.startTime || '10:00'}`,
+            duration: `${b.duration || 2} hours`,
+            status: (b.status || 'pending').toLowerCase()
+          }))
+          setBookingRequests(mapped)
+        } else if (isDemoUser) {
+          setBookingRequests(DEMO_REQUESTS)
+        } else {
+          setBookingRequests([])
+        }
+      } catch (err) {
+        console.warn('Failed to load live bookings for command center:', err.message)
+        if (isDemoUser) setBookingRequests(DEMO_REQUESTS)
+      } finally {
+        setLoadingRequests(false)
+      }
     }
-  ])
+    fetchLiveBookings()
+  }, [user, isDemoUser])
 
   // AI Insight Index
   const [aiInsightIndex, setAiInsightIndex] = useState(0)
@@ -89,13 +127,23 @@ export default function CommandCenter() {
   ]
 
   // Approve / Reject handler
-  const handleApprove = (id) => {
+  const handleApprove = async (id) => {
+    try {
+      await bookingService.updateBookingStatus(id, 'Approved')
+    } catch (err) {
+      console.warn('Failed to update status on backend:', err.message)
+    }
     setBookingRequests((prev) =>
       prev.map((req) => (req.id === id ? { ...req, status: 'approved' } : req))
     )
   }
 
-  const handleReject = (id) => {
+  const handleReject = async (id) => {
+    try {
+      await bookingService.updateBookingStatus(id, 'Rejected')
+    } catch (err) {
+      console.warn('Failed to update status on backend:', err.message)
+    }
     setBookingRequests((prev) =>
       prev.map((req) => (req.id === id ? { ...req, status: 'rejected' } : req))
     )
@@ -346,7 +394,14 @@ export default function CommandCenter() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F5F2ED]">
-                {bookingRequests.map((req) => (
+                {bookingRequests.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-xs text-stone-400">
+                      No booking requests found for your account.
+                    </td>
+                  </tr>
+                ) : (
+                  bookingRequests.map((req) => (
                   <tr key={req.id} className="hover:bg-[#FAF8F5] transition-colors">
                     {/* Researcher */}
                     <td className="py-3.5 pr-2">
@@ -431,7 +486,7 @@ export default function CommandCenter() {
                       )}
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>

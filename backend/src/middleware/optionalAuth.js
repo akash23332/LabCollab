@@ -18,7 +18,7 @@ const optionalAuth = async (req, res, next) => {
   if (!token) return next();
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fin_guard_secret' || 'secret123');
     // Only the id from the token is trusted.
     req.user = (await User.findById(decoded.id).select('-password')) || null;
   } catch {

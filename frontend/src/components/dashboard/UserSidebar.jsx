@@ -41,8 +41,8 @@ export default function UserSidebar() {
               {user?.avatar || 'MC'}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-white truncate">{user?.name || 'Maya Chen'}</p>
-              <p className="text-xs text-slate-400 truncate">{user?.institution || 'Tufts University'}</p>
+              <p className="text-sm font-bold text-white truncate">{user?.name || 'Researcher'}</p>
+              <p className="text-xs text-slate-400 truncate">{user?.institution || 'Partner Lab'}</p>
             </div>
           </div>
         </div>

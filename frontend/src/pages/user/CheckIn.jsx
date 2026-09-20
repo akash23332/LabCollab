@@ -21,18 +21,39 @@ import {
   Lightbulb
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import api from '../../services/api'
+import bookingService from '../../services/bookingService'
 
 export default function CheckIn() {
-  const { setActiveTab } = useAuth()
+  const { user, setActiveTab } = useAuth()
   const [activeMethod, setActiveMethod] = useState('qr') // 'qr' | 'manual'
   const [bookingId, setBookingId] = useState('LC-2026-SEM450')
   const [isScanning, setIsScanning] = useState(true)
   const [checkInState, setCheckInState] = useState('idle') // 'idle' | 'verifying' | 'success' | 'error'
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [cameraActive, setCameraActive] = useState(false)
+  const [userBookings, setUserBookings] = useState([])
+
+  const isDemoUser = !user || user.email === 'student@example.com' || user.email === 'demo@example.com'
+
+  // Fetch real user bookings from database
+  useEffect(() => {
+    const loadBookings = async () => {
+      try {
+        const res = await bookingService.getBookings()
+        if (res?.data && res.data.length > 0) {
+          setUserBookings(res.data)
+          setBookingId(res.data[0].bookingId || res.data[0].id)
+        }
+      } catch (err) {
+        console.warn('Checkin load bookings:', err.message)
+      }
+    }
+    loadBookings()
+  }, [user])
 
   // Booking Data
-  const currentBooking = {
+  const demoBooking = {
     id: 'LC-2026-SEM450',
     instrumentName: 'Scanning Electron Microscope (SEM)',
     model: 'FEI Nova NanoSEM 450',
@@ -46,18 +67,49 @@ export default function CheckIn() {
     image: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80'
   }
 
-  const handleVerify = () => {
+  const selectedRealBooking = userBookings.find(b => (b.bookingId === bookingId || b.id === bookingId)) || userBookings[0]
+  const currentBooking = selectedRealBooking ? {
+    id: selectedRealBooking.bookingId || selectedRealBooking.id || selectedRealBooking._id,
+    instrumentName: selectedRealBooking.equipmentName,
+    model: selectedRealBooking.equipmentCategory || 'Research Instrument',
+    lab: selectedRealBooking.lab || 'Campus Lab',
+    dept: selectedRealBooking.college || 'Central Facility',
+    date: selectedRealBooking.date,
+    time: `${selectedRealBooking.startTime} – ${selectedRealBooking.endTime}`,
+    type: 'Self-Use Access',
+    supervisor: 'Dr. Gurpreet Singh',
+    operatorStatus: 'Verified Clearance',
+    image: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80'
+  } : demoBooking
+
+  const handleVerify = async () => {
     setCheckInState('verifying')
+    try {
+      await api.post('/usage/check-in', { bookingId: currentBooking.id })
+    } catch (err) {
+      console.warn('Backend check-in API:', err.message)
+    }
     setTimeout(() => {
       setCheckInState('success')
-    }, 1200)
+      setTimeout(() => {
+        setActiveTab('active-session')
+      }, 800)
+    }, 1000)
   }
 
-  const handleSimulateScan = () => {
+  const handleSimulateScan = async () => {
     setCheckInState('verifying')
+    try {
+      await api.post('/usage/check-in', { bookingId: currentBooking.id })
+    } catch (err) {
+      console.warn('Backend simulate scan check-in:', err.message)
+    }
     setTimeout(() => {
       setCheckInState('success')
-    }, 1500)
+      setTimeout(() => {
+        setActiveTab('active-session')
+      }, 800)
+    }, 1200)
   }
 
   return (

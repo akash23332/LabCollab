@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { 
   Calendar, 
   Clock, 
@@ -24,49 +24,35 @@ import {
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import Button from '../../components/ui/Button'
+import bookingService from '../../services/bookingService'
 
 export default function UserDashboard() {
   const { user, setActiveTab } = useAuth()
   const [showCheckinModal, setShowCheckinModal] = useState(false)
   const [selectedBooking, setSelectedBooking] = useState(null)
+  const [userBookings, setUserBookings] = useState([])
+  const [loadingBookings, setLoadingBookings] = useState(true)
 
-  const stats = [
-    {
-      id: 'bookings',
-      label: 'UPCOMING BOOKINGS',
-      value: '3',
-      subtext: '↗ 1 this week',
-      icon: Calendar,
-      iconBg: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    },
-    {
-      id: 'hours',
-      label: 'HOURS THIS MONTH',
-      value: '14.5',
-      subtext: '37.0 total',
-      badge: '+20% vs Sep',
-      icon: Clock,
-      iconBg: 'bg-teal-50 text-teal-600 border-teal-100',
-    },
-    {
-      id: 'saved',
-      label: 'SAVED EQUIPMENT',
-      value: '8',
-      subtext: '2 available today',
-      icon: Bookmark,
-      iconBg: 'bg-amber-50 text-[#C58A48] border-amber-100',
-    },
-    {
-      id: 'proximity',
-      label: 'NETWORK PROXIMITY',
-      value: '12',
-      subtext: 'within 25 miles',
-      icon: MapPin,
-      iconBg: 'bg-orange-50 text-orange-600 border-orange-100',
-    },
-  ]
+  const isDemoUser = !user || user.email === 'student@example.com' || user.email === 'demo@example.com'
 
-  const upcomingBookings = [
+  useEffect(() => {
+    const fetchLiveBookings = async () => {
+      try {
+        setLoadingBookings(true)
+        const res = await bookingService.getBookings()
+        if (res?.data && Array.isArray(res.data)) {
+          setUserBookings(res.data)
+        }
+      } catch (err) {
+        console.warn('Live bookings fetch failed:', err.message)
+      } finally {
+        setLoadingBookings(false)
+      }
+    }
+    fetchLiveBookings()
+  }, [user])
+
+  const demoUpcomingBookings = useMemo(() => [
     {
       id: 'b1',
       title: 'Tektronix MSO54B',
@@ -103,42 +89,120 @@ export default function UserDashboard() {
       duration: '2.0 hrs',
       icon: Microscope,
     },
-  ]
+  ], [])
 
-  const trailActivities = [
-    {
-      id: 'a1',
-      title: 'Booking confirmed',
-      detail: 'Tektronix MSO54B • Northeastern',
-      time: '1h ago',
-      icon: CheckCircle2,
-      iconColor: 'text-emerald-500',
-    },
-    {
-      id: 'a2',
-      title: 'Session completed',
-      detail: 'Keysight N5182B • Tufts • 1h 35m',
-      time: 'Yesterday',
-      icon: Clock3,
-      iconColor: 'text-stone-400',
-    },
-    {
-      id: 'a3',
-      title: 'Added to watchlist',
-      detail: 'Zeiss LSM 880 Airyscan',
-      time: 'Oct 18',
-      icon: Heart,
-      iconColor: 'text-rose-400',
-    },
-    {
-      id: 'a4',
-      title: 'Review posted',
-      detail: 'Bruker D8 Advance • 5 stars',
-      time: 'Oct 17',
-      icon: Star,
-      iconColor: 'text-amber-400',
-    },
-  ]
+  const upcomingBookings = useMemo(() => {
+    if (userBookings.length > 0) {
+      return userBookings.map((b) => {
+        let Icon = Cpu
+        const cat = (b.equipmentCategory || '').toLowerCase()
+        if (cat.includes('micro') || cat.includes('bio') || cat.includes('life')) Icon = Microscope
+        else if (cat.includes('xrd') || cat.includes('analytical')) Icon = Layers
+
+        const isApproved = ['Approved', 'approved', 'CONFIRMED'].includes(b.status)
+        return {
+          id: b.bookingId || b.id || b._id,
+          title: b.equipmentName,
+          type: b.equipmentCategory || 'Lab Instrument',
+          status: isApproved ? 'CONFIRMED' : (b.status?.toUpperCase() || 'PENDING'),
+          statusColor: isApproved
+            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            : 'bg-amber-50 text-amber-700 border-amber-200',
+          institution: b.college || b.institution || 'Partner University',
+          date: b.date,
+          time: `${b.startTime} - ${b.endTime}`,
+          duration: `${b.duration || 2.0} hrs`,
+          icon: Icon,
+          raw: b,
+        }
+      })
+    }
+
+    if (isDemoUser) {
+      return demoUpcomingBookings
+    }
+
+    return []
+  }, [userBookings, isDemoUser, demoUpcomingBookings])
+
+  const stats = useMemo(() => {
+    const count = upcomingBookings.length
+    const totalHours = upcomingBookings.reduce((sum, b) => {
+      const dur = parseFloat(b.duration) || 2.0
+      return sum + dur
+    }, 0)
+
+    return [
+      {
+        id: 'bookings',
+        label: 'UPCOMING BOOKINGS',
+        value: String(count),
+        subtext: count > 0 ? `↗ ${count} scheduled` : 'No bookings',
+        icon: Calendar,
+        iconBg: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+      },
+      {
+        id: 'hours',
+        label: 'HOURS THIS MONTH',
+        value: totalHours.toFixed(1),
+        subtext: `${totalHours.toFixed(1)} total`,
+        badge: totalHours > 0 ? 'Active' : undefined,
+        icon: Clock,
+        iconBg: 'bg-teal-50 text-teal-600 border-teal-100',
+      },
+      {
+        id: 'saved',
+        label: 'SAVED EQUIPMENT',
+        value: isDemoUser ? '8' : '2',
+        subtext: 'in wishlist',
+        icon: Bookmark,
+        iconBg: 'bg-amber-50 text-[#C58A48] border-amber-100',
+      },
+      {
+        id: 'proximity',
+        label: 'NETWORK PROXIMITY',
+        value: '14',
+        subtext: 'instruments online',
+        icon: MapPin,
+        iconBg: 'bg-orange-50 text-orange-600 border-orange-100',
+      },
+    ]
+  }, [upcomingBookings, isDemoUser])
+
+  const trailActivities = useMemo(() => {
+    if (upcomingBookings.length > 0) {
+      return upcomingBookings.slice(0, 4).map((b, idx) => ({
+        id: `act-${idx}`,
+        title: `Booking ${b.status.toLowerCase()}`,
+        detail: `${b.title} • ${b.institution}`,
+        time: b.date || 'Recent',
+        icon: CheckCircle2,
+        iconColor: b.status === 'CONFIRMED' ? 'text-emerald-500' : 'text-amber-500',
+      }))
+    }
+
+    if (isDemoUser) {
+      return [
+        {
+          id: 'a1',
+          title: 'Booking confirmed',
+          detail: 'Tektronix MSO54B • Northeastern',
+          time: '1h ago',
+          icon: CheckCircle2,
+          iconColor: 'text-emerald-500',
+        },
+        {
+          id: 'a2',
+          title: 'Session completed',
+          detail: 'Keysight N5182B • Tufts • 1h 35m',
+          time: 'Yesterday',
+          icon: Clock3,
+          iconColor: 'text-stone-400',
+        },
+      ]
+    }
+
+  }, [upcomingBookings, isDemoUser])
 
   return (
     <div className="p-6 lg:p-10 max-w-7xl mx-auto space-y-8 animate-fadeIn">
@@ -149,10 +213,10 @@ export default function UserDashboard() {
             WEDNESDAY, OCTOBER 20, 2026
           </p>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-stone-900 tracking-tight mt-1 font-sans">
-            Good morning, <span className="text-[#C58A48]">{user?.name?.split(' ')[0] || 'Maya'}.</span>
+            Good morning, <span className="text-[#C58A48]">{user?.name?.split(' ')[0] || 'Researcher'}.</span>
           </h1>
           <p className="text-xs sm:text-sm text-stone-600 mt-1">
-            The network has <span className="font-bold text-stone-800">12 instruments</span> available within 25 miles
+            The network has <span className="font-bold text-stone-800">14 instruments</span> available across partner universities
           </p>
         </div>
 
@@ -178,38 +242,36 @@ export default function UserDashboard() {
         </div>
       </div>
 
-      {/* 4 Stat Cards Row */}
+      {/* Main 4 Metric / KPI Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((item) => {
-          const Icon = item.icon
+        {stats.map((stat) => {
+          const Icon = stat.icon
           return (
             <div
-              key={item.id}
-              className="rounded-2xl border border-[#EAE1D3] bg-white p-5 shadow-xs transition hover:shadow-md hover:border-[#C58A48]/50"
+              key={stat.id}
+              className="rounded-2xl border border-[#EAE1D3] bg-white p-5 shadow-xs transition hover:border-[#C58A48] hover:shadow-md"
             >
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
-                  {item.label}
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-stone-500">
+                  {stat.label}
                 </span>
-                <div className={`flex h-8 w-8 items-center justify-center rounded-xl border ${item.iconBg}`}>
+                <div className={`flex h-8 w-8 items-center justify-center rounded-xl border ${stat.iconBg}`}>
                   <Icon className="h-4 w-4" />
                 </div>
               </div>
 
               <div className="mt-3 flex items-baseline gap-2">
-                <span className="text-3xl font-extrabold text-stone-900 font-sans">
-                  {item.value}
+                <span className="text-3xl font-black text-stone-900 tracking-tight font-sans">
+                  {stat.value}
                 </span>
-                {item.badge && (
-                  <span className="rounded-md bg-emerald-50 border border-emerald-200/80 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
-                    {item.badge}
+                {stat.badge && (
+                  <span className="rounded-md bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                    {stat.badge}
                   </span>
                 )}
               </div>
 
-              <p className="mt-1 text-[11px] text-stone-500 font-medium">
-                {item.subtext}
-              </p>
+              <p className="mt-1 text-xs font-semibold text-stone-500">{stat.subtext}</p>
             </div>
           )
         })}
@@ -226,7 +288,7 @@ export default function UserDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
-                  YOUR WORKSPACE
+                  YOUR SCHEDULE
                 </p>
                 <h2 className="text-lg font-bold text-stone-900">Upcoming bookings</h2>
               </div>
@@ -240,48 +302,70 @@ export default function UserDashboard() {
               </button>
             </div>
 
-            <div className="space-y-3">
-              {upcomingBookings.map((booking) => {
-                const Icon = booking.icon
-                return (
-                  <div
-                    key={booking.id}
-                    className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-[#EAE1D3] bg-white p-4 shadow-xs transition hover:border-[#C58A48] hover:shadow-md"
-                  >
-                    <div className="flex items-start sm:items-center gap-3.5">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FCF7F0] border border-[#EED7B3] text-[#C58A48]">
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-bold text-stone-900">{booking.title}</h3>
-                          <span className={`rounded-md border px-2 py-0.5 text-[9px] font-bold ${booking.statusColor}`}>
-                            {booking.status}
-                          </span>
+            {upcomingBookings.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-[#EAE1D3] bg-[#FCF7F0]/40 p-8 text-center space-y-3">
+                <div className="mx-auto w-12 h-12 rounded-2xl bg-[#FCF7F0] border border-[#EED7B3] flex items-center justify-center text-[#C58A48]">
+                  <Calendar className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-sm font-bold text-stone-900">No bookings yet</h3>
+                  <p className="text-xs text-stone-500 max-w-sm mx-auto">
+                    You haven't reserved any laboratory equipment yet. Discover instruments across partner labs and schedule your session.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('explore')}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#C58A48] hover:bg-[#B37636] text-white text-xs font-bold shadow-xs transition cursor-pointer"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  <span>Explore Equipment</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {upcomingBookings.map((booking) => {
+                  const Icon = booking.icon
+                  return (
+                    <div
+                      key={booking.id}
+                      className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-[#EAE1D3] bg-white p-4 shadow-xs transition hover:border-[#C58A48] hover:shadow-md"
+                    >
+                      <div className="flex items-start sm:items-center gap-3.5">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#FCF7F0] border border-[#EED7B3] text-[#C58A48]">
+                          <Icon className="h-5 w-5" />
                         </div>
-                        <p className="text-xs text-stone-500 mt-0.5">
-                          {booking.institution} • <span className="font-semibold text-stone-700">{booking.date}</span>
-                        </p>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-bold text-stone-900">{booking.title}</h3>
+                            <span className={`rounded-md border px-2 py-0.5 text-[9px] font-bold ${booking.statusColor}`}>
+                              {booking.status}
+                            </span>
+                          </div>
+                          <p className="text-xs text-stone-500 mt-0.5">
+                            {booking.institution} • <span className="font-semibold text-stone-700">{booking.date}</span>
+                          </p>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 pt-2 sm:pt-0 border-stone-100">
-                      <div className="text-left sm:text-right">
-                        <p className="text-xs font-bold text-stone-800">{booking.time}</p>
-                        <p className="text-[10px] text-stone-400">{booking.duration}</p>
+                      <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 pt-2 sm:pt-0 border-stone-100">
+                        <div className="text-left sm:text-right">
+                          <p className="text-xs font-bold text-stone-800">{booking.time}</p>
+                          <p className="text-[10px] text-stone-400">{booking.duration}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedBooking(booking)}
+                          className="flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200 bg-stone-50 text-stone-600 transition group-hover:bg-[#C58A48] group-hover:border-[#C58A48] group-hover:text-white"
+                        >
+                          <ArrowRight className="h-4 w-4" />
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedBooking(booking)}
-                        className="flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200 bg-stone-50 text-stone-600 transition group-hover:bg-[#C58A48] group-hover:border-[#C58A48] group-hover:text-white"
-                      >
-                        <ArrowRight className="h-4 w-4" />
-                      </button>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Your Trail / Activity Log */}

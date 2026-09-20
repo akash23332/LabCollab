@@ -16,6 +16,11 @@ const usageLogSchema = new mongoose.Schema(
       ref: 'Booking',
       default: null,
     },
+    bookingId: {
+      type: String,
+      default: '',
+      index: true,
+    },
     user: {
       type: mongoose.Schema.Types.Mixed,
       ref: 'User',

@@ -18,28 +18,51 @@ import {
   Zap
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import api from '../../services/api'
 
 export default function ActiveSession() {
-  const { setActiveTab } = useAuth()
+  const { user, setActiveTab } = useAuth()
   
-  // Timer state (starts at 34 mins 16 secs for demo realism, counts up each second)
-  const [secondsElapsed, setSecondsElapsed] = useState(34 * 60 + 16)
+  const isDemoUser = !user || user.email === 'student@example.com' || user.email === 'demo@example.com'
+
+  const [activeSession, setActiveSession] = useState(null)
+  // Timer state (starts at 34 mins 16 secs for demo realism, or calculated from checkInTime)
+  const [secondsElapsed, setSecondsElapsed] = useState(isDemoUser ? 34 * 60 + 16 : 0)
   const [isTimerRunning, setIsTimerRunning] = useState(true)
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
   const [showHelpModal, setShowHelpModal] = useState(false)
   const [helpMessage, setHelpMessage] = useState('')
   const [helpSent, setHelpSent] = useState(false)
 
+  // Fetch real active session from database
+  useEffect(() => {
+    const fetchActive = async () => {
+      try {
+        const res = await api.get('/usage/active')
+        if (res?.data) {
+          setActiveSession(res.data)
+          if (res.data.checkInTime) {
+            const diff = Math.floor((Date.now() - new Date(res.data.checkInTime).getTime()) / 1000)
+            setSecondsElapsed(Math.max(0, diff))
+          }
+        }
+      } catch (err) {
+        console.warn('Active session fetch:', err.message)
+      }
+    }
+    fetchActive()
+  }, [user])
+
   // Live seconds ticker
   useEffect(() => {
     let interval = null
-    if (isTimerRunning) {
+    if (isTimerRunning && (activeSession || isDemoUser)) {
       interval = setInterval(() => {
         setSecondsElapsed((prev) => prev + 1)
       }, 1000)
     }
     return () => clearInterval(interval)
-  }, [isTimerRunning])
+  }, [isTimerRunning, activeSession, isDemoUser])
 
   // Format seconds into HH, MM, SS
   const hours = Math.floor(secondsElapsed / 3600)
@@ -48,12 +71,19 @@ export default function ActiveSession() {
 
   const pad = (num) => String(num).padStart(2, '0')
 
-  // Cost calculation (e.g. ₹1,200/hr or $18/hr)
-  const hourlyRate = 18
+  // Cost calculation
+  const hourlyRate = 500
   const currentCost = ((secondsElapsed / 3600) * hourlyRate).toFixed(2)
 
-  const handleFinishCheckout = () => {
+  const handleFinishCheckout = async () => {
     setIsTimerRunning(false)
+    if (activeSession) {
+      try {
+        await api.post('/usage/check-out', { logId: activeSession.logId || activeSession._id })
+      } catch (err) {
+        console.warn('Check-out error:', err.message)
+      }
+    }
     setShowCheckoutModal(true)
   }
 

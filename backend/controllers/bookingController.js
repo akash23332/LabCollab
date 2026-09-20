@@ -29,6 +29,17 @@ const getAllBookings = async (req, res, next) => {
     const { status, equipmentId, date, search, page = 1, limit = 50 } = req.query;
     const query = {};
 
+    // If non-admin student is logged in, restrict to their own bookings
+    if (req.user && req.user.role !== 'admin') {
+      query.$or = [
+        { user: req.user._id },
+        { 'student.userId': req.user._id },
+        { 'student.email': new RegExp(`^${req.user.email}$`, 'i') },
+      ];
+    } else if (req.query.userEmail) {
+      query['student.email'] = new RegExp(`^${req.query.userEmail}$`, 'i');
+    }
+
     if (status && status !== 'all') {
       query.status = new RegExp(status, 'i');
     }

@@ -7,6 +7,10 @@ export const bookingService = {
     return await api.get(endpoint);
   },
 
+  getMyBookings: async () => {
+    return await api.get('/bookings/my');
+  },
+
   getBookingById: async (id) => {
     return await api.get(`/bookings/${id}`);
   },

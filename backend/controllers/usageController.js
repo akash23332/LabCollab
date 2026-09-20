@@ -220,6 +220,7 @@ const checkIn = async (req, res, next) => {
     const newLog = await UsageLog.create({
       booking: booking ? booking._id : null,
       bookingId: booking ? booking.bookingId : bookingId,
+      user: req.user?._id || booking?.user || null,
       equipmentId: booking ? booking.equipmentId : '',
       equipmentName: booking ? booking.equipmentName : 'Lab Instrument',
       studentName: booking?.student?.name || req.user?.name || 'Student',
@@ -246,12 +247,29 @@ const checkIn = async (req, res, next) => {
  */
 const checkOut = async (req, res, next) => {
   try {
-    const { logId } = req.body;
-    const query = isValidObjectId(logId)
-      ? { $or: [{ _id: logId }, { logId }] }
-      : { logId };
+    const { logId, bookingId } = req.body;
+    let query = null;
 
-    const log = await UsageLog.findOne(query);
+    if (logId) {
+      query = isValidObjectId(logId)
+        ? { $or: [{ _id: logId }, { logId }] }
+        : { logId };
+    } else if (bookingId) {
+      query = isValidObjectId(bookingId)
+        ? { $or: [{ bookingId }, { booking: bookingId }] }
+        : { bookingId };
+    } else if (req.user) {
+      query = {
+        status: 'Active',
+        $or: [
+          { studentEmail: req.user.email },
+          { 'student.email': req.user.email },
+          { user: req.user._id },
+        ],
+      };
+    }
+
+    const log = query ? await UsageLog.findOne(query).sort({ createdAt: -1 }) : null;
     if (!log) {
       return res.status(404).json({ success: false, message: 'Session log not found' });
     }
@@ -259,7 +277,17 @@ const checkOut = async (req, res, next) => {
     log.checkOutTime = new Date();
     log.status = 'Completed';
     log.endTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (req.body.notes) {
+      log.notes = log.notes ? `${log.notes} | ${req.body.notes}` : req.body.notes;
+    }
     await log.save();
+
+    if (log.equipmentId) {
+      await Equipment.updateOne(
+        { $or: [{ equipmentId: log.equipmentId }, { _id: isValidObjectId(log.equipmentId) ? log.equipmentId : null }] },
+        { $inc: { activeSessions: -1 } }
+      ).catch(() => {});
+    }
 
     return res.json({
       success: true,
