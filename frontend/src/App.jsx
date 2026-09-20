@@ -1,34 +1,16 @@
-<<<<<<< Updated upstream
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-=======
-import Navbar from './components/layout/Navbar'
-import Footer from './components/layout/Footer'
-import Hero from './components/landing/Hero'
-import StatsBar from './components/landing/StatsBar'
-import FeaturesGrid from './components/landing/FeaturesGrid'
-import NetworkSection from './components/landing/NetworkSection'
-import DarkCTA from './components/landing/DarkCTA'
-import { stats } from './data/landingData'
-import { AuthProvider, useAuth } from './context/AuthContext'
-import LoginModal from './components/auth/LoginModal'
-import UserLayout from './layouts/UserLayout'
-import UserDashboard from './pages/user/Dashboard'
-import FindEquipment from './pages/user/FindEquipment'
-import AISearch from './pages/user/AISearch'
-import LabNetwork from './pages/user/LabNetwork'
->>>>>>> Stashed changes
 
-// Teammate's landing page
+// Public landing
 import Landing from './pages/public/Landing';
 
 // Auth pages
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 
-// Admin panel (existing, untouched)
+// Admin panel
 import AdminLayout from './layouts/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
 import Equipment from './pages/admin/Equipment';
@@ -37,11 +19,15 @@ import BookingRequests from './pages/admin/BookingRequests';
 import UsageLogs from './pages/admin/UsageLogs';
 import Analytics from './pages/admin/Analytics';
 
-// Student / User portal
+// User portal
 import UserLayout from './layouts/UserLayout';
 import UserDashboard from './pages/user/Dashboard';
 import FindEquipment from './pages/user/FindEquipment';
 import AISearch from './pages/user/AISearch';
+import LabNetwork from './pages/user/LabNetwork';
+import CheckIn from './pages/user/CheckIn';
+import ActiveSession from './pages/user/ActiveSession';
+import CommandCenter from './pages/user/CommandCenter';
 
 function StudentDashboardWrapper() {
   const { activeTab } = useAuth();
@@ -53,18 +39,42 @@ function StudentDashboardWrapper() {
           <FindEquipment />
         </UserLayout>
       );
+
     case 'ai-search':
-<<<<<<< Updated upstream
       return (
         <UserLayout>
           <AISearch />
         </UserLayout>
       );
-=======
-      return <AISearch />
+
     case 'network':
-      return <LabNetwork />
->>>>>>> Stashed changes
+      return (
+        <UserLayout>
+          <LabNetwork />
+        </UserLayout>
+      );
+
+    case 'checkin':
+      return (
+        <UserLayout>
+          <CheckIn />
+        </UserLayout>
+      );
+
+    case 'active-session':
+      return (
+        <UserLayout>
+          <ActiveSession />
+        </UserLayout>
+      );
+
+    case 'command-center':
+      return (
+        <UserLayout>
+          <CommandCenter />
+        </UserLayout>
+      );
+
     case 'overview':
     default:
       return (
@@ -77,9 +87,11 @@ function StudentDashboardWrapper() {
 
 function LogoutHandler() {
   const { logout } = useAuth();
+
   useEffect(() => {
     logout();
   }, [logout]);
+
   return <Navigate to="/login" replace />;
 }
 
@@ -88,6 +100,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+
           {/* Public Landing & Auth Routes */}
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
@@ -113,18 +126,30 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route
+              index
+              element={<Navigate to="/admin/dashboard" replace />}
+            />
+
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="equipment" element={<Equipment />} />
             <Route path="availability" element={<Availability />} />
             <Route path="booking-requests" element={<BookingRequests />} />
             <Route path="usage-logs" element={<UsageLogs />} />
             <Route path="analytics" element={<Analytics />} />
-            <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+
+            <Route
+              path="*"
+              element={<Navigate to="/admin/dashboard" replace />}
+            />
           </Route>
 
           {/* Catch-all Fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route
+            path="*"
+            element={<Navigate to="/" replace />}
+          />
+
         </Routes>
       </BrowserRouter>
     </AuthProvider>

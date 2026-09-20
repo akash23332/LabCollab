@@ -6,14 +6,12 @@ import {
   QrCode, 
   Radio, 
   Sliders, 
-  BrainCircuit, 
   ArrowLeftRight, 
   HelpCircle, 
   LogOut,
   ChevronRight,
   ExternalLink,
-  Building2,
-  Home
+  Building2
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
@@ -31,7 +29,6 @@ export default function UserSidebar() {
     { id: 'checkin', label: 'Check-in', icon: QrCode },
     { id: 'active-session', label: 'Active session', icon: Radio },
     { id: 'command-center', label: 'Command center', icon: Sliders },
-    { id: 'intelligence', label: 'Lab Intelligence', icon: BrainCircuit },
   ]
 
   return (
@@ -113,17 +110,6 @@ export default function UserSidebar() {
         <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">
           Account
         </p>
-        
-        <button
-          onClick={() => navigateTo('landing')}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition"
-        >
-          <div className="flex items-center gap-2.5">
-            <Home className="h-4 w-4 text-slate-400" />
-            <span>Landing Page</span>
-          </div>
-          <ExternalLink className="h-3 w-3 text-slate-500" />
-        </button>
 
         <button
           onClick={() => alert('Switched to Pan-India Grid Hub')}
