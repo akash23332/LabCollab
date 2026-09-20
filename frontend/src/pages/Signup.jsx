@@ -12,6 +12,7 @@ export default function Signup() {
     name: '',
     institution: '',
     email: '',
+    role: 'student',
     password: '',
     confirmPassword: '',
   });
@@ -57,13 +58,18 @@ export default function Signup() {
 
     setBusy(true);
     try {
-      await signup({
+      const created = await signup({
         name: form.name,
         institution: form.institution,
         email: form.email,
         password: form.password,
+        role: form.role,
       });
-      navigate('/dashboard', { replace: true });
+      if (created?.role === 'admin' || form.role === 'admin') {
+        navigate('/admin/dashboard', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     } catch (err) {
       setError(err.message || 'Error creating account.');
     } finally {
@@ -102,6 +108,28 @@ export default function Signup() {
               placeholder="e.g. Indian Institute of Technology"
               required
             />
+          </label>
+
+          <label>
+            Account Type
+            <select
+              value={form.role}
+              onChange={(e) => set('role', e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.65rem 0.85rem',
+                borderRadius: '8px',
+                border: '1px solid #dcd5c9',
+                backgroundColor: '#fff',
+                fontSize: '0.9rem',
+                color: '#241b16',
+                outline: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="student">Student / Researcher</option>
+              <option value="admin">Lab Administrator / Admin</option>
+            </select>
           </label>
 
           <label>

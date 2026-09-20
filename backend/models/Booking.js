@@ -1,132 +1,149 @@
 const mongoose = require('mongoose');
 
-const HH_MM = /^([01]\d|2[0-3]):([0-5]\d)$/;
-
-/** Store one booking day as UTC midnight so "one date" === "one Date value". */
-const toUTCDay = (value) => {
-  if (!value) return value;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-};
-
 const bookingSchema = new mongoose.Schema(
   {
+    bookingId: {
+      type: String,
+      unique: true,
+      index: true,
+      trim: true,
+      default: function () {
+        return `BK-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      },
+    },
+    equipmentId: {
+      type: String,
+      index: true,
+      trim: true,
+      default: '',
+    },
+    equipmentName: {
+      type: String,
+      trim: true,
+      default: 'Laboratory Instrument',
+    },
+    equipmentCategory: {
+      type: String,
+      default: '',
+    },
+    // User references
     user: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.Mixed,
       ref: 'User',
-      required: [true, 'User is required'],
-    },
-    equipment: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Equipment',
-      required: [true, 'Equipment is required'],
-    },
-    institution: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Institution',
-      required: [true, 'Institution is required'],
-    },
-    availability: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Availability',
       default: null,
     },
+    student: {
+      name: { type: String, default: 'Student' },
+      email: { type: String, default: '' },
+      avatar: { type: String, default: '' },
+      institution: { type: String, default: 'Chitkara University' },
+      userId: { type: mongoose.Schema.Types.Mixed, ref: 'User' },
+    },
+    // Equipment & Institution references
+    equipment: {
+      type: mongoose.Schema.Types.Mixed,
+      ref: 'Equipment',
+      default: null,
+    },
+    institution: {
+      type: mongoose.Schema.Types.Mixed,
+      ref: 'Institution',
+      default: null,
+    },
+    college: {
+      type: String,
+      default: 'Chitkara University',
+    },
+    lab: {
+      type: String,
+      default: 'General Lab',
+    },
+    building: {
+      type: String,
+      default: 'Block A',
+    },
+    room: {
+      type: String,
+      default: '',
+    },
     date: {
-      type: Date,
-      required: [true, 'Date is required'],
-      set: toUTCDay,
+      type: mongoose.Schema.Types.Mixed, // Can be Date or String YYYY-MM-DD
+      required: true,
     },
     startTime: {
       type: String,
-      required: [true, 'startTime is required'],
-      trim: true,
-      validate: {
-        validator: (value) => HH_MM.test(value),
-        message: 'startTime must be a valid 24-hour time in HH:mm format',
-      },
+      required: true,
     },
     endTime: {
       type: String,
-      required: [true, 'endTime is required'],
-      trim: true,
-      validate: {
-        validator: (value) => HH_MM.test(value),
-        message: 'endTime must be a valid 24-hour time in HH:mm format',
-      },
+      required: true,
     },
     duration: {
       type: Number,
-      required: [true, 'Duration is required'],
-      min: [0, 'Duration cannot be negative'],
+      default: 2,
     },
     purpose: {
       type: String,
-      required: [true, 'Purpose is required'],
-      trim: true,
+      default: 'Academic Research',
     },
     status: {
       type: String,
-      enum: {
-        values: ['pending', 'approved', 'rejected', 'cancelled', 'completed'],
-        message: 'Status must be one of: pending, approved, rejected, cancelled, completed',
-      },
-      default: 'pending',
+      default: 'Pending',
+    },
+    rejectionReason: {
+      type: String,
+      default: '',
+    },
+    approvedBy: {
+      type: String,
+      default: '',
+    },
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+    totalPrice: {
+      type: Number,
+      default: 0,
     },
     totalAmount: {
       type: Number,
-      required: [true, 'Total amount is required'],
-      min: [0, 'Total amount cannot be negative'],
+      default: 0,
     },
     paymentStatus: {
       type: String,
-      enum: {
-        values: ['unpaid', 'pending', 'paid', 'failed', 'refunded'],
-        message: 'paymentStatus must be one of: unpaid, pending, paid, failed, refunded',
-      },
+      enum: ['unpaid', 'pending', 'paid', 'refunded'],
       default: 'unpaid',
     },
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
-// Schema-level pre-validation check: startTime must be earlier than endTime
-bookingSchema.pre('validate', function checkTimes(next) {
-  if (
-    this.startTime &&
-    this.endTime &&
-    HH_MM.test(this.startTime) &&
-    HH_MM.test(this.endTime) &&
-    this.startTime >= this.endTime
-  ) {
-    this.invalidate('endTime', 'endTime must be later than startTime', this.endTime);
+bookingSchema.pre('save', function (next) {
+  if (this.totalPrice && !this.totalAmount) this.totalAmount = this.totalPrice;
+  if (this.totalAmount && !this.totalPrice) this.totalPrice = this.totalAmount;
+  if (!this.equipmentId && this.equipment) {
+    this.equipmentId = this.equipment._id ? this.equipment._id.toString() : this.equipment.toString();
   }
-  return next();
+  if (!this.student?.name && this.user?.name) {
+    this.student = {
+      name: this.user.name,
+      email: this.user.email || '',
+      avatar: this.user.avatar || '',
+      institution: this.user.institution || this.college || '',
+      userId: this.user._id || this.user,
+    };
+  }
+  next();
 });
 
-// Indexes to support fast double-booking conflict queries and user dashboard lookups
-bookingSchema.index({ equipment: 1, date: 1, status: 1 });
-bookingSchema.index({ user: 1, createdAt: -1 });
-bookingSchema.index({ institution: 1, status: 1 });
-
-bookingSchema.set('toJSON', {
-  transform: (doc, ret) => {
-    ret.id = ret._id;
-    delete ret.__v;
-    return ret;
-  },
-});
-
-bookingSchema.set('toObject', {
-  transform: (doc, ret) => {
-    ret.id = ret._id;
-    delete ret.__v;
-    return ret;
-  },
+bookingSchema.virtual('id').get(function () {
+  return this.bookingId || this._id.toHexString();
 });
 
 const Booking = mongoose.model('Booking', bookingSchema);
-
 module.exports = Booking;

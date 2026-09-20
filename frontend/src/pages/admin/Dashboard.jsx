@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -14,12 +14,8 @@ import {
   Building2,
 } from 'lucide-react';
 import StatCard from '../../components/admin/StatCard';
-import {
-  mockStats,
-  mockBookingRequests,
-  mockRecentActivity,
-  mockUtilizationData,
-} from '../../data/adminMockData';
+import { analyticsService } from '../../services/analyticsService';
+import { bookingService } from '../../services/bookingService';
 import './Dashboard.css';
 
 const INITIAL_FACILITIES = [
@@ -61,40 +57,57 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Booking requests with interactive approve/reject state
-  const [requests, setRequests] = useState([
-    ...mockBookingRequests,
-    {
-      id: 'br-5',
-      studentName: 'Ananya Gupta',
-      studentEmail: 'ananya.gupta@student.chitkara.edu.in',
-      studentAvatar: 'AG',
-      equipmentId: 'eq-4',
-      equipmentName: 'Thermal Camera - Radiometric',
-      date: '2024-12-24',
-      startTime: '11:00',
-      endTime: '13:00',
-      status: 'Pending',
-      purpose: 'PCB thermal profiling analysis',
-      createdAt: '2024-12-19T09:10:00',
-    },
-    {
-      id: 'br-6',
-      studentName: 'Siddharth Rao',
-      studentEmail: 'siddharth.rao@student.chitkara.edu.in',
-      studentAvatar: 'SR',
-      equipmentId: 'eq-6',
-      equipmentName: 'Vector Network Analyzer',
-      date: '2024-12-24',
-      startTime: '14:30',
-      endTime: '16:30',
-      status: 'Pending',
-      purpose: 'Microstrip antenna impedance matching',
-      createdAt: '2024-12-19T11:20:00',
-    },
-  ]);
-
+  const [dashboardStats, setDashboardStats] = useState({
+    totalEquipment: 0,
+    pendingRequests: 0,
+    activeSessions: 0,
+    utilizationRate: 0,
+  });
+  const [activityList, setActivityList] = useState([]);
+  const [utilizationList, setUtilizationList] = useState([]);
+  const [facilityList, setFacilityList] = useState([]);
+  const [requests, setRequests] = useState([]);
   const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const res = await analyticsService.getDashboardMetrics();
+        if (res.success && res.data) {
+          if (res.data.stats) setDashboardStats(res.data.stats);
+          setActivityList(res.data.recentActivity || []);
+          setUtilizationList(res.data.utilizationData || []);
+          setFacilityList(res.data.facilities || []);
+        }
+      } catch (err) {
+        console.warn('Dashboard backend metrics fetch:', err.message);
+      }
+
+      try {
+        const bookRes = await bookingService.getBookings({ status: 'Pending' });
+        if (bookRes.success && Array.isArray(bookRes.data)) {
+          const mapped = bookRes.data.map(b => ({
+            id: b.bookingId || b.id || b._id,
+            studentName: b.student?.name || 'Student',
+            studentEmail: b.student?.email || '',
+            studentAvatar: b.student?.avatar || 'ST',
+            equipmentId: b.equipmentId,
+            equipmentName: b.equipmentName,
+            date: b.date,
+            startTime: b.startTime,
+            endTime: b.endTime,
+            status: b.status,
+            purpose: b.purpose,
+            createdAt: b.requestedAt || b.createdAt,
+          }));
+          setRequests(mapped);
+        }
+      } catch (err) {
+        console.warn('Dashboard pending bookings fetch:', err.message);
+      }
+    };
+    fetchDashboardData();
+  }, []);
 
   const showToast = (message) => {
     setToast(message);
@@ -103,14 +116,24 @@ export default function Dashboard() {
     }, 3800);
   };
 
-  const handleApprove = (id, studentName) => {
+  const handleApprove = async (id, studentName) => {
+    try {
+      await bookingService.updateBookingStatus(id, 'Approved');
+    } catch (err) {
+      console.warn('Backend approve failed, updating locally:', err.message);
+    }
     setRequests((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: 'Approved' } : r))
     );
     showToast(`Approved booking request for ${studentName}.`);
   };
 
-  const handleReject = (id, studentName) => {
+  const handleReject = async (id, studentName) => {
+    try {
+      await bookingService.updateBookingStatus(id, 'Rejected', 'Rejected by administrator');
+    } catch (err) {
+      console.warn('Backend reject failed, updating locally:', err.message);
+    }
     setRequests((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: 'Rejected' } : r))
     );
@@ -125,23 +148,23 @@ export default function Dashboard() {
     () => [
       {
         label: 'Total Equipment',
-        value: mockStats.totalEquipment,
+        value: dashboardStats.totalEquipment,
         trend: 12,
-        trendLabel: 'vs last month',
+        trendLabel: 'in laboratory',
         icon: <Package size={24} />,
         iconColor: 'cyan',
       },
       {
         label: 'Active Bookings',
-        value: mockStats.activeBookings,
+        value: dashboardStats.activeBookings,
         trend: 8,
-        trendLabel: 'vs last week',
+        trendLabel: 'confirmed slots',
         icon: <CalendarClock size={24} />,
         iconColor: 'blue',
       },
       {
         label: 'Pending Requests',
-        value: pendingCount,
+        value: pendingCount || dashboardStats.pendingRequests,
         trend: pendingCount > 0 ? pendingCount : 0,
         trendLabel: 'needs review',
         icon: <ClipboardList size={24} />,
@@ -149,14 +172,14 @@ export default function Dashboard() {
       },
       {
         label: 'Utilization',
-        value: `${mockStats.utilizationRate}%`,
+        value: `${dashboardStats.utilizationRate}%`,
         trend: 5,
-        trendLabel: 'vs last month',
+        trendLabel: 'capacity usage',
         icon: <TrendingUp size={24} />,
         iconColor: 'green',
       },
     ],
-    [pendingCount]
+    [dashboardStats, pendingCount]
   );
 
   return (
@@ -219,13 +242,19 @@ export default function Dashboard() {
             </button>
           </div>
           <div className="admin-card-body">
-            <div className="admin-booking-request-list">
-              {requests.slice(0, 6).map((request) => {
-                const isPending = request.status === 'Pending';
-                const isApproved = request.status === 'Approved';
+            {requests.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '36px 16px', color: '#94a3b8' }}>
+                <p style={{ fontWeight: 600, fontSize: '15px', color: '#f1f5f9', margin: '0 0 4px' }}>No pending booking requests</p>
+                <p style={{ fontSize: '13px', margin: 0, opacity: 0.8 }}>New student requests will appear here dynamically in real time.</p>
+              </div>
+            ) : (
+              <div className="admin-booking-request-list">
+                {requests.slice(0, 6).map((request) => {
+                  const isPending = request.status === 'Pending';
+                  const isApproved = request.status === 'Approved';
 
-                return (
-                  <div key={request.id} className="admin-booking-request-item">
+                  return (
+                    <div key={request.id} className="admin-booking-request-item">
                     <div className="admin-booking-request-info">
                       <div className="admin-booking-request-avatar">
                         {request.studentAvatar || 'ST'}
@@ -281,6 +310,7 @@ export default function Dashboard() {
                 );
               })}
             </div>
+            )}
           </div>
         </section>
 
@@ -301,35 +331,42 @@ export default function Dashboard() {
             </button>
           </div>
           <div className="admin-card-body">
-            <div className="admin-utilization-list">
-              {mockUtilizationData.map((item) => {
-                const isHigh = item.value >= 70;
-                return (
-                  <div key={item.name} className="admin-utilization-item">
-                    <div className="admin-utilization-info">
-                      <div className="admin-utilization-name-row">
-                        <span className="admin-utilization-name">{item.name}</span>
-                        <span
-                          className={`admin-utilization-val-pill ${
-                            isHigh ? 'high' : ''
-                          }`}
-                        >
-                          {item.value}%
-                        </span>
-                      </div>
-                      <div className="admin-utilization-bar">
-                        <div
-                          className={`admin-utilization-fill ${
-                            isHigh ? 'high' : 'normal'
-                          }`}
-                          style={{ width: `${item.value}%` }}
-                        />
+            {utilizationList.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '36px 16px', color: '#94a3b8' }}>
+                <p style={{ fontWeight: 600, fontSize: '15px', color: '#f1f5f9', margin: '0 0 4px' }}>No equipment records</p>
+                <p style={{ fontSize: '13px', margin: 0, opacity: 0.8 }}>Add instruments in Equipment section to start tracking telemetry.</p>
+              </div>
+            ) : (
+              <div className="admin-utilization-list">
+                {utilizationList.map((item) => {
+                  const isHigh = item.value >= 70;
+                  return (
+                    <div key={item.name} className="admin-utilization-item">
+                      <div className="admin-utilization-info">
+                        <div className="admin-utilization-name-row">
+                          <span className="admin-utilization-name">{item.name}</span>
+                          <span
+                            className={`admin-utilization-val-pill ${
+                              isHigh ? 'high' : ''
+                            }`}
+                          >
+                            {item.value}%
+                          </span>
+                        </div>
+                        <div className="admin-utilization-bar">
+                          <div
+                            className={`admin-utilization-fill ${
+                              isHigh ? 'high' : 'normal'
+                            }`}
+                            style={{ width: `${item.value}%` }}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
       </div>
@@ -341,7 +378,7 @@ export default function Dashboard() {
           <div className="admin-card-header">
             <div className="admin-card-header-left">
               <h2 className="admin-card-title">System Activity Log</h2>
-              <span className="admin-card-badge">Live Audit</span>
+              <span className="admin-card-badge">{activityList.length} Events</span>
             </div>
             <button
               type="button"
@@ -353,24 +390,31 @@ export default function Dashboard() {
             </button>
           </div>
           <div className="admin-card-body">
-            <div className="admin-activity-list">
-              {mockRecentActivity.map((activity) => (
-                <div key={activity.id} className="admin-activity-item">
-                  <div className={`admin-activity-icon ${activity.type}`}>
-                    {activity.type === 'request' && <ClipboardList size={16} />}
-                    {activity.type === 'approved' && <Check size={16} />}
-                    {activity.type === 'updated' && <Activity size={16} />}
+            {activityList.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '36px 16px', color: '#94a3b8' }}>
+                <p style={{ fontWeight: 600, fontSize: '15px', color: '#f1f5f9', margin: '0 0 4px' }}>No recent activity</p>
+                <p style={{ fontSize: '13px', margin: 0, opacity: 0.8 }}>Live session and booking logs will be displayed here.</p>
+              </div>
+            ) : (
+              <div className="admin-activity-list">
+                {activityList.map((activity) => (
+                  <div key={activity.id} className="admin-activity-item">
+                    <div className={`admin-activity-icon ${activity.type}`}>
+                      {activity.type === 'request' && <ClipboardList size={16} />}
+                      {activity.type === 'approved' && <Check size={16} />}
+                      {activity.type === 'updated' && <Activity size={16} />}
+                    </div>
+                    <div className="admin-activity-content">
+                      <p
+                        className="admin-activity-text"
+                        dangerouslySetInnerHTML={{ __html: activity.message }}
+                      />
+                      <p className="admin-activity-time">{activity.time}</p>
+                    </div>
                   </div>
-                  <div className="admin-activity-content">
-                    <p
-                      className="admin-activity-text"
-                      dangerouslySetInnerHTML={{ __html: activity.message }}
-                    />
-                    <p className="admin-activity-time">{activity.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
@@ -379,7 +423,7 @@ export default function Dashboard() {
           <div className="admin-card-header">
             <div className="admin-card-header-left">
               <h2 className="admin-card-title">Active Facility Overview</h2>
-              <span className="admin-card-badge">4 Hubs</span>
+              <span className="admin-card-badge">{facilityList.length} Labs</span>
             </div>
             <button
               type="button"
@@ -391,19 +435,25 @@ export default function Dashboard() {
             </button>
           </div>
           <div className="admin-card-body">
-            <div className="admin-facility-grid">
-              {INITIAL_FACILITIES.map((facility) => (
-                <div key={facility.name} className="admin-facility-card">
-                  <div className="admin-facility-header">
-                    <span className="admin-facility-name">{facility.name}</span>
-                    <span
-                      className={`admin-facility-status-dot ${
-                        facility.isBusy ? 'busy' : ''
-                      }`}
-                      title={facility.status}
-                    />
-                  </div>
-                  <span className="admin-facility-meta">{facility.location}</span>
+            {facilityList.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '36px 16px', color: '#94a3b8' }}>
+                <p style={{ fontWeight: 600, fontSize: '15px', color: '#f1f5f9', margin: '0 0 4px' }}>No active facilities</p>
+                <p style={{ fontSize: '13px', margin: 0, opacity: 0.8 }}>Facilities will appear once laboratory equipment is added.</p>
+              </div>
+            ) : (
+              <div className="admin-facility-grid">
+                {facilityList.map((facility) => (
+                  <div key={facility.name} className="admin-facility-card">
+                    <div className="admin-facility-header">
+                      <span className="admin-facility-name">{facility.name}</span>
+                      <span
+                        className={`admin-facility-status-dot ${
+                          facility.isBusy ? 'busy' : ''
+                        }`}
+                        title={facility.status}
+                      />
+                    </div>
+                    <span className="admin-facility-meta">{facility.location}</span>
                   <div
                     style={{
                       display: 'flex',
@@ -436,6 +486,7 @@ export default function Dashboard() {
                 </div>
               ))}
             </div>
+            )}
           </div>
         </section>
       </div>

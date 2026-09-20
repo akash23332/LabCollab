@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { mockStats } from '../../data/adminMockData';
 import './AdminSidebar.css';
 
 const navigation = [
@@ -87,13 +86,13 @@ export default function AdminSidebar({ isOpen, onClose }) {
       <div className="admin-sidebar-footer">
         <div className="admin-sidebar-status">
           <div className="admin-sidebar-status-header">
-            <span className="admin-sidebar-status-label">Lab Utilization</span>
-            <span className="admin-sidebar-status-value">{mockStats.utilizationRate}%</span>
+            <span className="admin-sidebar-status-label">Lab System</span>
+            <span className="admin-sidebar-status-value" style={{ color: '#4ade80' }}>Online</span>
           </div>
           <div className="admin-sidebar-status-track">
             <div
               className="admin-sidebar-status-fill"
-              style={{ width: `${mockStats.utilizationRate}%` }}
+              style={{ width: '100%', background: '#22c55e' }}
             />
           </div>
         </div>
@@ -113,10 +112,21 @@ export default function AdminSidebar({ isOpen, onClose }) {
         </div>
 
         <div className="admin-user-info">
-          <div className="admin-user-avatar">{user?.avatar || 'NP'}</div>
+          <div className="admin-user-avatar">
+            {user?.name
+              ? user.name
+                  .split(' ')
+                  .map((p) => p[0])
+                  .slice(0, 2)
+                  .join('')
+                  .toUpperCase()
+              : 'AD'}
+          </div>
           <div className="admin-user-details">
-            <div className="admin-user-name">{user?.name || 'Nikhil Palyal'}</div>
-            <div className="admin-user-role">{user?.role === 'admin' ? 'Administrator' : 'Lab Technician'}</div>
+            <div className="admin-user-name">{user?.name || 'Administrator'}</div>
+            <div className="admin-user-role">
+              {user?.role === 'admin' ? 'Administrator' : 'Lab Technician'}
+            </div>
           </div>
         </div>
       </div>

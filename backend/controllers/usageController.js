@@ -1,297 +1,306 @@
-/**
- * Phase 6 - usage controller (QR check-in / check-out + usage history).
- *
- * The requesting user always comes from the JWT (`req.user`); nothing in the
- * request body can select a user. Timestamps are written by the service from
- * the server clock.
- */
-
-const usageService = require('../services/usageService');
 const UsageLog = require('../models/UsageLog');
 const Equipment = require('../src/models/Equipment');
-const Institution = require('../src/models/Institution');
-const { isValidObjectId, canManage, parseLimit } = require('../src/utils/apiHelpers');
-const { resolveDateRange } = require('../src/utils/usageConfig');
+const Booking = require('../models/Booking');
+const { isValidObjectId } = require('../src/utils/apiHelpers');
 
-const USAGE_STATUSES = ['active', 'completed'];
+/**
+ * @desc    Get all usage logs with filtering
+ * @route   GET /api/usage-logs and GET /api/usage/logs
+ */
+const getUsageLogs = async (req, res, next) => {
+  try {
+    const { status, lab, date, equipmentId, search, page = 1, limit = 50 } = req.query;
+    const query = {};
 
-/** Usage history defaults to the newest 50 records, hard capped at 100. */
-const DEFAULT_HISTORY_LIMIT = 50;
-const MAX_HISTORY_LIMIT = 100;
+    if (status && status !== 'all') {
+      query.status = new RegExp(status, 'i');
+    }
 
-/** Optional startDate/endDate filter on history endpoints. */
-const historyRangeFilter = (query) => {
-  if (!query.startDate && !query.endDate) return null;
-  return resolveDateRange({ startDate: query.startDate, endDate: query.endDate });
+    if (lab) query.lab = lab;
+    if (date) query.date = date;
+
+    if (equipmentId) {
+      query.$or = [
+        { equipmentId },
+        { equipment: isValidObjectId(equipmentId) ? equipmentId : null },
+        { 'equipment.equipmentId': equipmentId },
+      ];
+    }
+
+    if (search) {
+      const regex = new RegExp(search, 'i');
+      query.$or = [
+        { logId: regex },
+        { studentName: regex },
+        { studentEmail: regex },
+        { equipmentName: regex },
+        { lab: regex },
+        { notes: regex },
+      ];
+    }
+
+    const pageNum = parseInt(page, 10) || 1;
+    const limitNum = parseInt(limit, 10) || 50;
+    const skip = (pageNum - 1) * limitNum;
+
+    const [logs, total] = await Promise.all([
+      UsageLog.find(query).sort({ date: -1, createdAt: -1 }).skip(skip).limit(limitNum),
+      UsageLog.countDocuments(query),
+    ]);
+
+    return res.json({
+      success: true,
+      total,
+      count: logs.length,
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum),
+      data: logs,
+      logs,
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 /**
- * @desc    Check in to an approved booking by scanning the equipment QR
- * @route   POST /api/usage/check-in
- * @access  Private
+ * @desc    Get single usage log
+ * @route   GET /api/usage-logs/:id
  */
-const checkInEquipment = async (req, res, next) => {
+const getUsageLogById = async (req, res, next) => {
   try {
-    const equipmentId = usageService.resolveEquipmentIdInput(req.body || {});
+    const { id } = req.params;
+    const query = isValidObjectId(id)
+      ? { $or: [{ _id: id }, { logId: id }] }
+      : { logId: id };
 
-    const { usageLog, booking, equipment, institution, checkInWindow } = await usageService.checkIn({
-      user: req.user,
+    const log = await UsageLog.findOne(query);
+    if (!log) {
+      return res.status(404).json({ success: false, message: 'Usage log not found' });
+    }
+
+    return res.json({ success: true, data: log, log });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Create new usage log session
+ * @route   POST /api/usage-logs
+ */
+const createUsageLog = async (req, res, next) => {
+  try {
+    const {
       equipmentId,
+      studentName,
+      studentEmail,
+      date,
+      startTime,
+      endTime,
+      notes,
+    } = req.body;
+
+    const equipment = await Equipment.findOne({
+      $or: [
+        { equipmentId },
+        { _id: isValidObjectId(equipmentId) ? equipmentId : null },
+        { equipmentNumber: equipmentId },
+      ],
+    });
+
+    const count = await UsageLog.countDocuments();
+    const logId = `UL-${1000 + count + 1}`;
+
+    const newLog = await UsageLog.create({
+      logId,
+      equipmentId: equipment ? equipment.equipmentId : equipmentId,
+      equipmentName: equipment ? (equipment.equipmentName || equipment.name) : 'Laboratory Equipment',
+      equipmentNumber: equipment ? equipment.equipmentNumber : '',
+      studentName: studentName || 'Student',
+      studentEmail: studentEmail || 'student@example.com',
+      lab: equipment ? equipment.labName : 'General Lab',
+      college: equipment ? (equipment.collegeName || equipment.collegeId) : 'Chitkara University',
+      date: date || new Date().toISOString().slice(0, 10),
+      startTime: startTime || '10:00',
+      endTime: endTime || '12:00',
+      status: 'Active',
+      notes: notes || '',
+    });
+
+    if (equipment) {
+      await Equipment.updateOne({ _id: equipment._id }, { $inc: { activeSessions: 1 } });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'Usage log session created',
+      data: newLog,
+      log: newLog,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Update usage log
+ * @route   PATCH /api/usage-logs/:id
+ */
+const updateUsageLog = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, notes } = req.body;
+
+    const query = isValidObjectId(id)
+      ? { $or: [{ _id: id }, { logId: id }] }
+      : { logId: id };
+
+    const log = await UsageLog.findOne(query);
+    if (!log) {
+      return res.status(404).json({ success: false, message: 'Usage log not found' });
+    }
+
+    if (status) log.status = status;
+    if (notes !== undefined) log.notes = notes;
+
+    await log.save();
+
+    return res.json({
+      success: true,
+      message: 'Usage session updated',
+      data: log,
+      log,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Get usage statistics
+ * @route   GET /api/usage-logs/stats
+ */
+const getUsageStats = async (req, res, next) => {
+  try {
+    const totalSessions = await UsageLog.countDocuments();
+    const activeSessions = await UsageLog.countDocuments({ status: { $in: ['Active', 'active', 'in-progress'] } });
+
+    const totalHours = totalSessions * 2;
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const monthlySessions = await UsageLog.countDocuments({
+      date: new RegExp(`^${currentMonthKey}`),
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        totalSessions,
+        totalHours,
+        activeSessions,
+        monthlySessions,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    QR Check-in
+ * @route   POST /api/usage/check-in
+ */
+const checkIn = async (req, res, next) => {
+  try {
+    const { bookingId } = req.body;
+    const booking = await Booking.findOne({
+      $or: [{ bookingId }, { _id: isValidObjectId(bookingId) ? bookingId : null }],
+    });
+
+    const newLog = await UsageLog.create({
+      booking: booking ? booking._id : null,
+      bookingId: booking ? booking.bookingId : bookingId,
+      equipmentId: booking ? booking.equipmentId : '',
+      equipmentName: booking ? booking.equipmentName : 'Lab Instrument',
+      studentName: booking?.student?.name || req.user?.name || 'Student',
+      studentEmail: booking?.student?.email || req.user?.email || '',
+      checkInTime: new Date(),
+      status: 'Active',
+      startTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });
 
     return res.status(201).json({
       success: true,
-      message: 'Checked in successfully',
-      usageLog: usageService.formatUsageLog(usageLog, { equipment, institution, booking }),
-      booking: usageService.formatBooking(booking),
-      checkInWindow: {
-        openAt: checkInWindow.openAt,
-        closeAt: checkInWindow.closeAt,
-        earlyMinutes: checkInWindow.earlyMinutes,
-        lateGraceMinutes: checkInWindow.lateGraceMinutes,
-      },
+      message: 'Check-in successful',
+      data: newLog,
+      log: newLog,
     });
   } catch (error) {
-    return next(error);
+    next(error);
   }
 };
 
 /**
- * @desc    Check out of an active usage session by scanning the equipment QR
+ * @desc    QR Check-out
  * @route   POST /api/usage/check-out
- * @access  Private
  */
-const checkOutEquipment = async (req, res, next) => {
+const checkOut = async (req, res, next) => {
   try {
-    const equipmentId = usageService.resolveEquipmentIdInput(req.body || {});
+    const { logId } = req.body;
+    const query = isValidObjectId(logId)
+      ? { $or: [{ _id: logId }, { logId }] }
+      : { logId };
 
-    const { usageLog, booking, equipment, institution, bookingTransitioned } = await usageService.checkOut({
-      user: req.user,
-      equipmentId,
-    });
+    const log = await UsageLog.findOne(query);
+    if (!log) {
+      return res.status(404).json({ success: false, message: 'Session log not found' });
+    }
 
-    return res.status(200).json({
+    log.checkOutTime = new Date();
+    log.status = 'Completed';
+    log.endTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    await log.save();
+
+    return res.json({
       success: true,
-      message: 'Checked out successfully',
-      usageLog: usageService.formatUsageLog(usageLog, { equipment, institution, booking }),
-      booking: usageService.formatBooking(booking),
-      bookingCompleted: bookingTransitioned,
+      message: 'Check-out successful',
+      data: log,
+      log,
     });
   } catch (error) {
-    return next(error);
+    next(error);
   }
 };
 
 /**
- * @desc    The authenticated user's own usage history (newest first)
- * @route   GET /api/usage/my
- * @access  Private
- */
-const getMyUsage = async (req, res, next) => {
-  try {
-    const limit = parseLimit(req.query.limit, DEFAULT_HISTORY_LIMIT, MAX_HISTORY_LIMIT);
-
-    const userMatch = [{ user: req.user._id }];
-    if (req.user.email) {
-      userMatch.push({ 'student.email': req.user.email });
-    }
-    const filter = { $or: userMatch };
-    if (req.query.status) {
-      if (!USAGE_STATUSES.includes(req.query.status)) {
-        return res.status(400).json({ message: `status must be one of: ${USAGE_STATUSES.join(', ')}` });
-      }
-      filter.status = req.query.status;
-    }
-
-    const range = historyRangeFilter(req.query);
-    if (range) filter.checkInTime = { $gte: range.start, $lt: range.endExclusive };
-
-    const logs = await usageService
-      .withUsagePopulate(UsageLog.find(filter).sort({ checkInTime: -1 }).limit(limit))
-      .lean();
-
-    return res.status(200).json({
-      success: true,
-      count: logs.length,
-      usageLogs: logs.map((log) => usageService.formatUsageLog(log)),
-    });
-  } catch (error) {
-    return next(error);
-  }
-};
-
-/**
- * @desc    The authenticated user's currently open sessions
+ * @desc    Get active session for current user
  * @route   GET /api/usage/active
- * @access  Private
  */
-const getActiveUsageSessions = async (req, res, next) => {
+const getActiveSession = async (req, res, next) => {
   try {
-    const activeSessions = await usageService.getActiveSessions(req.user._id);
+    const userEmail = req.user?.email;
+    const query = { status: { $in: ['Active', 'active', 'in-progress'] } };
+    if (userEmail) query.studentEmail = userEmail;
 
-    return res.status(200).json({
+    const activeLog = await UsageLog.findOne(query).sort({ createdAt: -1 });
+
+    return res.json({
       success: true,
-      count: activeSessions.length,
-      activeSessions,
+      data: activeLog,
+      session: activeLog,
     });
   } catch (error) {
-    return next(error);
-  }
-};
-
-/**
- * @desc    Usage history for one piece of equipment
- * @route   GET /api/usage/equipment/:equipmentId
- * @access  Private (equipment/institution manager, admin)
- */
-const getEquipmentUsage = async (req, res, next) => {
-  try {
-    const { equipmentId } = req.params;
-    if (!isValidObjectId(equipmentId)) {
-      return res.status(400).json({ message: 'Invalid equipment id' });
-    }
-
-    const equipment = await Equipment.findById(equipmentId).populate(
-      'institution',
-      'name createdBy city state'
-    );
-    if (!equipment) {
-      return res.status(404).json({ message: 'Equipment not found' });
-    }
-
-    if (!canManage(req.user, equipment, [equipment.institution?.createdBy])) {
-      return res.status(403).json({ message: 'You are not authorized to view usage for this equipment' });
-    }
-
-    const limit = parseLimit(req.query.limit, DEFAULT_HISTORY_LIMIT, MAX_HISTORY_LIMIT);
-
-    const filter = { equipment: equipment._id };
-    if (req.query.status && USAGE_STATUSES.includes(req.query.status)) filter.status = req.query.status;
-
-    const range = historyRangeFilter(req.query);
-    if (range) filter.checkInTime = { $gte: range.start, $lt: range.endExclusive };
-
-    const logs = await usageService
-      .withUsagePopulate(UsageLog.find(filter).sort({ checkInTime: -1 }).limit(limit))
-      .lean();
-
-    const completedLogs = logs.filter((log) => log.status === 'completed');
-
-    return res.status(200).json({
-      success: true,
-      equipment: {
-        _id: String(equipment._id),
-        name: equipment.name,
-        category: equipment.category,
-        status: equipment.status,
-      },
-      count: logs.length,
-      totalUsageMinutes: completedLogs.reduce(
-        (total, log) => total + (Number(log.actualDurationMinutes) || 0),
-        0
-      ),
-      // Managers see who used the equipment; private profile fields are not included.
-      usageLogs: logs.map((log) => usageService.formatUsageLog(log, { includeUser: true })),
-    });
-  } catch (error) {
-    return next(error);
-  }
-};
-
-/**
- * @desc    Usage history for every piece of equipment of an institution
- * @route   GET /api/usage/institution/:institutionId
- * @access  Private (institution manager/owner, admin)
- */
-const getInstitutionUsage = async (req, res, next) => {
-  try {
-    const { institutionId } = req.params;
-    if (!isValidObjectId(institutionId)) {
-      return res.status(400).json({ message: 'Invalid institution id' });
-    }
-
-    const institution = await Institution.findById(institutionId);
-    if (!institution) {
-      return res.status(404).json({ message: 'Institution not found' });
-    }
-
-    if (!canManage(req.user, institution)) {
-      return res.status(403).json({ message: 'You are not authorized to view usage for this institution' });
-    }
-
-    const limit = parseLimit(req.query.limit, DEFAULT_HISTORY_LIMIT, MAX_HISTORY_LIMIT);
-
-    const filter = { institution: institution._id };
-    if (req.query.status && USAGE_STATUSES.includes(req.query.status)) filter.status = req.query.status;
-
-    const range = historyRangeFilter(req.query);
-    if (range) filter.checkInTime = { $gte: range.start, $lt: range.endExclusive };
-
-    const [logs, activeCount] = await Promise.all([
-      usageService
-        .withUsagePopulate(UsageLog.find(filter).sort({ checkInTime: -1 }).limit(limit))
-        .lean(),
-      UsageLog.countDocuments({ institution: institution._id, status: 'active' }),
-    ]);
-
-    const completedLogs = logs.filter((log) => log.status === 'completed');
-
-    return res.status(200).json({
-      success: true,
-      institution: {
-        _id: String(institution._id),
-        name: institution.name,
-        city: institution.city || '',
-        state: institution.state || '',
-      },
-      count: logs.length,
-      activeSessions: activeCount,
-      totalUsageMinutes: completedLogs.reduce(
-        (total, log) => total + (Number(log.actualDurationMinutes) || 0),
-        0
-      ),
-      usageLogs: logs.map((log) => usageService.formatUsageLog(log, { includeUser: true })),
-    });
-  } catch (error) {
-    return next(error);
-  }
-};
-
-/**
- * @desc    Official QR identity for a piece of equipment
- * @route   GET /api/equipment/:equipmentId/qr
- * @access  Private (equipment/institution manager, admin)
- */
-const getEquipmentQr = async (req, res, next) => {
-  try {
-    const { equipmentId } = req.params;
-    if (!isValidObjectId(equipmentId)) {
-      return res.status(400).json({ message: 'Invalid equipment id' });
-    }
-
-    const equipment = await Equipment.findById(equipmentId).populate('institution', 'name createdBy');
-    if (!equipment) {
-      return res.status(404).json({ message: 'Equipment not found' });
-    }
-
-    if (!canManage(req.user, equipment, [equipment.institution?.createdBy])) {
-      return res.status(403).json({ message: 'You are not authorized to manage this equipment QR code' });
-    }
-
-    const qr = await usageService.buildEquipmentQr(equipment);
-
-    return res.status(200).json({ success: true, qr });
-  } catch (error) {
-    return next(error);
+    next(error);
   }
 };
 
 module.exports = {
-  checkInEquipment,
-  checkOutEquipment,
-  getMyUsage,
-  getActiveUsageSessions,
-  getEquipmentUsage,
-  getInstitutionUsage,
-  getEquipmentQr,
+  getUsageLogs,
+  getUsageLogById,
+  createUsageLog,
+  updateUsageLog,
+  getUsageStats,
+  checkIn,
+  checkOut,
+  getActiveSession,
 };

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Clock,
   Activity,
@@ -12,409 +12,17 @@ import StatCard from '../../components/admin/StatCard';
 import UsageFilterBar from '../../components/admin/UsageFilterBar';
 import UsageLogTable from '../../components/admin/UsageLogTable';
 import UsageLogModal from '../../components/admin/UsageLogModal';
+import usageService from '../../services/usageService';
 import '../../components/admin/UsageLogs.css';
 
 /* ============================================================
-   MOCK USAGE LOGS DATA
+   USAGE LOGS DATA
    Strictly actual usage records (Completed, Active, Cancelled)
-   No "Pending" status (Pending belongs to Booking Requests)
    ============================================================ */
-const INITIAL_USAGE_LOGS = [
-  {
-    id: 'UL-1024',
-    student: {
-      name: 'Rahul Sharma',
-      email: 'rahul@example.com',
-    },
-    equipment: {
-      name: 'Digital Storage Oscilloscope',
-      category: 'Electronics',
-    },
-    lab: 'Electronics Lab',
-    college: 'Example College',
-    building: 'Block A',
-    room: '204',
-    date: '2026-09-20',
-    scheduledStart: '10:00',
-    scheduledEnd: '12:00',
-    actualStart: '10:05',
-    actualEnd: '11:52',
-    durationMinutes: 107,
-    purpose: 'Signal analysis experiment',
-    status: 'Completed',
-    technician: 'Amit Kumar',
-    notes: 'Equipment used successfully. No anomalies observed during high-frequency capture.',
-    cancellationReason: '',
-  },
-  {
-    id: 'UL-1023',
-    student: {
-      name: 'Priya Singh',
-      email: 'priya@example.com',
-    },
-    equipment: {
-      name: 'Digital Multimeter',
-      category: 'Electronics',
-    },
-    lab: 'Electronics Lab',
-    college: 'Example College',
-    building: 'Block A',
-    room: '201',
-    date: '2026-09-20',
-    scheduledStart: '14:00',
-    scheduledEnd: '15:00',
-    actualStart: '14:02',
-    actualEnd: '14:48',
-    durationMinutes: 46,
-    purpose: 'Precision voltage calibration',
-    status: 'Completed',
-    technician: 'Amit Kumar',
-    notes: 'Multimeter probes verified and recalibrated after circuit test.',
-    cancellationReason: '',
-  },
-  {
-    id: 'UL-1022',
-    student: {
-      name: 'Arjun Mehta',
-      email: 'arjun@example.com',
-    },
-    equipment: {
-      name: '3D Printer',
-      category: 'Fabrication',
-    },
-    lab: 'Fabrication Lab',
-    college: 'Example College',
-    building: 'Block B',
-    room: '102',
-    date: '2026-09-20',
-    scheduledStart: '11:00',
-    scheduledEnd: '13:00',
-    actualStart: '11:00',
-    actualEnd: '',
-    durationMinutes: 72,
-    purpose: 'Functional drone chassis prototype printing',
-    status: 'Active',
-    technician: 'Rakesh Patel',
-    notes: 'Dual-nozzle extrusion in progress. Bed temperature stable at 65°C.',
-    cancellationReason: '',
-  },
-  {
-    id: 'UL-1021',
-    student: {
-      name: 'Sneha Verma',
-      email: 'sneha@example.com',
-    },
-    equipment: {
-      name: 'Thermal Camera',
-      category: 'Imaging',
-    },
-    lab: 'IoT Lab',
-    college: 'Example College',
-    building: 'Block C',
-    room: '305',
-    date: '2026-09-20',
-    scheduledStart: '10:30',
-    scheduledEnd: '12:30',
-    actualStart: '10:40',
-    actualEnd: '',
-    durationMinutes: 55,
-    purpose: 'Heat dissipation benchmark on embedded board',
-    status: 'Active',
-    technician: 'Neha Reddy',
-    notes: 'Radiometric infrared video stream recording.',
-    cancellationReason: '',
-  },
-  {
-    id: 'UL-1020',
-    student: {
-      name: 'Vikram Sethi',
-      email: 'vikram@example.com',
-    },
-    equipment: {
-      name: 'CNC Milling Machine',
-      category: 'Fabrication',
-    },
-    lab: 'Fabrication Lab',
-    college: 'Example College',
-    building: 'Block B',
-    room: '108',
-    date: '2026-09-20',
-    scheduledStart: '12:00',
-    scheduledEnd: '14:00',
-    actualStart: '12:10',
-    actualEnd: '',
-    durationMinutes: 38,
-    purpose: 'Aluminum mounting bracket precision slotting',
-    status: 'Active',
-    technician: 'Rakesh Patel',
-    notes: 'Safety interlocks locked. Coolant circulation running.',
-    cancellationReason: '',
-  },
-  {
-    id: 'UL-1019',
-    student: {
-      name: 'Kabir Joshi',
-      email: 'kabir@example.com',
-    },
-    equipment: {
-      name: 'Spectrum Analyzer',
-      category: 'RF & Communications',
-    },
-    lab: 'RF & Communications Lab',
-    college: 'Example College',
-    building: 'Block C',
-    room: '210',
-    date: '2026-09-20',
-    scheduledStart: '09:00',
-    scheduledEnd: '11:00',
-    actualStart: '—',
-    actualEnd: '—',
-    durationMinutes: 0,
-    purpose: '5G antenna harmonic measurements',
-    status: 'Cancelled',
-    technician: 'Neha Reddy',
-    notes: 'No-show logged after 30-minute standard grace window.',
-    cancellationReason: 'Student did not arrive.',
-  },
-  {
-    id: 'UL-1018',
-    student: {
-      name: 'Ananya Gupta',
-      email: 'ananya@example.com',
-    },
-    equipment: {
-      name: 'Digital Storage Oscilloscope',
-      category: 'Electronics',
-    },
-    lab: 'Electronics Lab',
-    college: 'Example College',
-    building: 'Block A',
-    room: '204',
-    date: '2026-09-19',
-    scheduledStart: '14:00',
-    scheduledEnd: '16:00',
-    actualStart: '14:00',
-    actualEnd: '16:00',
-    durationMinutes: 120,
-    purpose: 'Power supply ripple measurement',
-    status: 'Completed',
-    technician: 'Amit Kumar',
-    notes: 'All 4 channels utilized. Probes grounded and inspected.',
-    cancellationReason: '',
-  },
-  {
-    id: 'UL-1017',
-    student: {
-      name: 'Rohan Das',
-      email: 'rohan@example.com',
-    },
-    equipment: {
-      name: 'Digital Microscope',
-      category: 'Imaging',
-    },
-    lab: 'Materials Lab',
-    college: 'Example College',
-    building: 'Block A',
-    room: '301',
-    date: '2026-09-19',
-    scheduledStart: '10:00',
-    scheduledEnd: '11:30',
-    actualStart: '10:15',
-    actualEnd: '11:25',
-    durationMinutes: 70,
-    purpose: 'Polymer surface morphology inspection',
-    status: 'Completed',
-    technician: 'Sunita Roy',
-    notes: 'High-res microphotographs saved to storage drive.',
-    cancellationReason: '',
-  },
-  {
-    id: 'UL-1016',
-    student: {
-      name: 'Meera Nambiar',
-      email: 'meera@example.com',
-    },
-    equipment: {
-      name: '3D Printer',
-      category: 'Fabrication',
-    },
-    lab: 'Fabrication Lab',
-    college: 'Example College',
-    building: 'Block B',
-    room: '102',
-    date: '2026-09-19',
-    scheduledStart: '15:30',
-    scheduledEnd: '17:30',
-    actualStart: '—',
-    actualEnd: '—',
-    durationMinutes: 0,
-    purpose: 'Biocompatible scaffold printing',
-    status: 'Cancelled',
-    technician: 'Rakesh Patel',
-    notes: 'Technician logged localized power fault in Block B.',
-    cancellationReason: 'Scheduled maintenance due to localized power fluctuation in Block B.',
-  },
-  {
-    id: 'UL-1015',
-    student: {
-      name: 'Devansh Rao',
-      email: 'devansh@example.com',
-    },
-    equipment: {
-      name: 'Logic Analyzer',
-      category: 'Electronics',
-    },
-    lab: 'Electronics Lab',
-    college: 'Example College',
-    building: 'Block A',
-    room: '205',
-    date: '2026-09-18',
-    scheduledStart: '11:00',
-    scheduledEnd: '13:00',
-    actualStart: '11:10',
-    actualEnd: '12:45',
-    durationMinutes: 95,
-    purpose: 'I2C & SPI peripheral protocol decoding',
-    status: 'Completed',
-    technician: 'Amit Kumar',
-    notes: 'Timing diagrams captured. Bus speeds verified.',
-    cancellationReason: '',
-  },
-  {
-    id: 'UL-1014',
-    student: {
-      name: 'Tanya Nair',
-      email: 'tanya@example.com',
-    },
-    equipment: {
-      name: 'Vector Network Analyzer',
-      category: 'RF & Communications',
-    },
-    lab: 'RF & Communications Lab',
-    college: 'Example College',
-    building: 'Block C',
-    room: '210',
-    date: '2026-09-17',
-    scheduledStart: '13:00',
-    scheduledEnd: '15:00',
-    actualStart: '13:05',
-    actualEnd: '14:50',
-    durationMinutes: 105,
-    purpose: 'S-parameter characterization of microstrip filter',
-    status: 'Completed',
-    technician: 'Neha Reddy',
-    notes: 'Full two-port SOLT calibration completed before testing.',
-    cancellationReason: '',
-  },
-  {
-    id: 'UL-1013',
-    student: {
-      name: 'Aditya Kapoor',
-      email: 'aditya@example.com',
-    },
-    equipment: {
-      name: 'Thermal Camera',
-      category: 'Imaging',
-    },
-    lab: 'IoT Lab',
-    college: 'Example College',
-    building: 'Block C',
-    room: '305',
-    date: '2026-09-16',
-    scheduledStart: '16:00',
-    scheduledEnd: '17:00',
-    actualStart: '16:03',
-    actualEnd: '16:49',
-    durationMinutes: 46,
-    purpose: 'Lithium battery cell temperature logging under discharge',
-    status: 'Completed',
-    technician: 'Neha Reddy',
-    notes: 'Thermal gradients recorded. Max temp stayed within safety threshold.',
-    cancellationReason: '',
-  },
-  {
-    id: 'UL-1012',
-    student: {
-      name: 'Pooja Kulkarni',
-      email: 'pooja@example.com',
-    },
-    equipment: {
-      name: 'CNC Milling Machine',
-      category: 'Fabrication',
-    },
-    lab: 'Fabrication Lab',
-    college: 'Example College',
-    building: 'Block B',
-    room: '108',
-    date: '2026-09-15',
-    scheduledStart: '09:30',
-    scheduledEnd: '11:30',
-    actualStart: '09:35',
-    actualEnd: '11:15',
-    durationMinutes: 100,
-    purpose: 'Delrin robotics gear machining',
-    status: 'Completed',
-    technician: 'Rakesh Patel',
-    notes: 'Zero tool wear. Vacuum extraction ran continuously.',
-    cancellationReason: '',
-  },
-  {
-    id: 'UL-1011',
-    student: {
-      name: 'Yash Chopra',
-      email: 'yash@example.com',
-    },
-    equipment: {
-      name: 'Digital Multimeter',
-      category: 'Electronics',
-    },
-    lab: 'Electronics Lab',
-    college: 'Example College',
-    building: 'Block A',
-    room: '201',
-    date: '2026-09-08',
-    scheduledStart: '10:00',
-    scheduledEnd: '11:00',
-    actualStart: '10:02',
-    actualEnd: '10:55',
-    durationMinutes: 53,
-    purpose: 'Resistor tolerance batch verification',
-    status: 'Completed',
-    technician: 'Amit Kumar',
-    notes: 'Standard lab calibration procedure adhered to.',
-    cancellationReason: '',
-  },
-  {
-    id: 'UL-1010',
-    student: {
-      name: 'Simran Kaur',
-      email: 'simran@example.com',
-    },
-    equipment: {
-      name: 'Digital Microscope',
-      category: 'Imaging',
-    },
-    lab: 'Materials Lab',
-    college: 'Example College',
-    building: 'Block A',
-    room: '301',
-    date: '2026-09-04',
-    scheduledStart: '14:00',
-    scheduledEnd: '15:30',
-    actualStart: '—',
-    actualEnd: '—',
-    durationMinutes: 0,
-    purpose: 'Ceramic fracture cross-section evaluation',
-    status: 'Cancelled',
-    technician: 'Sunita Roy',
-    notes: 'Advance cancellation submitted by student due to sickness.',
-    cancellationReason: 'Student notified illness prior to session.',
-  },
-];
 
 export default function UsageLogs() {
   // Usage logs state
-  const [usageLogs, setUsageLogs] = useState(INITIAL_USAGE_LOGS);
+  const [usageLogs, setUsageLogs] = useState([]);
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -428,6 +36,40 @@ export default function UsageLogs() {
 
   // Toast feedback state
   const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const res = await usageService.getUsageLogs();
+        if (res.success && Array.isArray(res.data)) {
+          const mapped = res.data.map((l) => ({
+            id: l.logId || l.id || l._id,
+            student: l.student,
+            equipment: l.equipment,
+            lab: l.lab,
+            college: l.college,
+            building: l.building,
+            room: l.room,
+            date: l.date,
+            scheduledStart: l.scheduledStart,
+            scheduledEnd: l.scheduledEnd,
+            actualStart: l.actualStart || l.scheduledStart,
+            actualEnd: l.actualEnd || '',
+            durationMinutes: l.durationMinutes || 0,
+            purpose: l.purpose,
+            status: l.status,
+            technician: l.technician || 'Technician',
+            notes: l.notes || '',
+            cancellationReason: l.cancellationReason || '',
+          }));
+          setUsageLogs(mapped);
+        }
+      } catch (err) {
+        console.warn('Backend usage logs fetch error:', err.message);
+      }
+    };
+    fetchLogs();
+  }, []);
 
   const showToast = useCallback((message) => {
     setToast(message);
@@ -463,17 +105,12 @@ export default function UsageLogs() {
       return sum + (l.durationMinutes || 0);
     }, 0);
 
-    // Dynamic historical baseline: 233 + 15 = 248 sessions
-    const totalSessions = 233 + usageLogs.length;
-
-    // Dynamic historical baseline: 610.3 + (totalMinutes / 60) = 624.5 hrs
-    const hoursUsed = (610.3 + totalMinutes / 60).toFixed(1);
-
-    // This month records
-    const septRecordsCount = usageLogs.filter((l) =>
-      (l.date || '').startsWith('2026-09')
+    const totalSessions = usageLogs.length;
+    const hoursUsed = (totalMinutes / 60).toFixed(1);
+    const thisMonthPrefix = new Date().toISOString().slice(0, 7);
+    const thisMonthSessions = usageLogs.filter((l) =>
+      (l.date || '').startsWith(thisMonthPrefix)
     ).length;
-    const thisMonthSessions = 71 + septRecordsCount; // 86 sessions
 
     return {
       totalSessions,
@@ -600,6 +237,19 @@ export default function UsageLogs() {
 
       if (updatedRecord) {
         setSelectedLog(updatedRecord);
+        fetch(`http://localhost:5000/api/usage-logs/${logId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('labshare_token') || ''}`,
+          },
+          body: JSON.stringify({
+            status: 'Completed',
+            actualEnd: currentTimeStr,
+            notes: updatedRecord.notes,
+          }),
+        }).catch((err) => console.warn('Backend update log failed:', err.message));
+
         showToast(
           `Usage session ${logId} ended — recorded actual runtime of ${Math.floor(
             updatedRecord.durationMinutes / 60

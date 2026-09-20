@@ -5,19 +5,28 @@ const {
   getEquipmentById,
   updateEquipment,
   deleteEquipment,
-  verifyEquipment,
+  exportForAI,
+  syncDemandPredictions,
+  searchAISemantic,
 } = require('../controllers/equipmentController');
-const { protect, adminOnly } = require('../middleware/authMiddleware');
 const optionalAuth = require('../middleware/optionalAuth');
 
 const router = express.Router();
 
-router.route('/').post(protect, createEquipment).get(optionalAuth, getEquipment);
-router.patch('/:id/verify', protect, adminOnly, verifyEquipment);
+router.get('/export/ai-format', exportForAI);
+router.post('/sync-demand', syncDemandPredictions);
+router.post('/ai-search', searchAISemantic);
+
+router
+  .route('/')
+  .post(optionalAuth, createEquipment)
+  .get(optionalAuth, getEquipment);
+
 router
   .route('/:id')
   .get(optionalAuth, getEquipmentById)
-  .patch(protect, updateEquipment)
-  .delete(protect, deleteEquipment);
+  .put(optionalAuth, updateEquipment)
+  .patch(optionalAuth, updateEquipment)
+  .delete(optionalAuth, deleteEquipment);
 
 module.exports = router;

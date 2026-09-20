@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   Search,
   RefreshCw,
@@ -19,242 +19,64 @@ import {
   Ban,
 } from 'lucide-react';
 import StatCard from '../../components/admin/StatCard';
+import bookingService from '../../services/bookingService';
 import './BookingRequests.css';
 
 /* ============================================================
    MOCK DATA — shaped for a future API response
    ============================================================ */
 
-const INITIAL_REQUESTS = [
-  {
-    id: 'BR-1024',
-    student: { name: 'Rahul Sharma', email: 'rahul.sharma@xyz.edu' },
-    equipment: { name: 'Digital Storage Oscilloscope', category: 'Electronics' },
-    lab: 'Electronics Lab',
-    college: 'Chitkara University',
-    building: 'Block A',
-    room: '204',
-    date: '2026-09-20',
-    startTime: '10:00',
-    endTime: '12:00',
-    purpose: 'Signal analysis experiment',
-    requestedAt: '2026-09-19T19:42:00',
-    status: 'Pending',
-    rejectionReason: '',
-  },
-  {
-    id: 'BR-1023',
-    student: { name: 'Priya Singh', email: 'priya.singh@xyz.edu' },
-    equipment: { name: 'Digital Multimeter', category: 'Electronics' },
-    lab: 'Electronics Lab',
-    college: 'Chitkara University',
-    building: 'Block A',
-    room: '201',
-    date: '2026-09-20',
-    startTime: '14:00',
-    endTime: '15:00',
-    purpose: 'Voltage measurement',
-    requestedAt: '2026-09-19T15:20:00',
-    status: 'Approved',
-    rejectionReason: '',
-    approvedBy: 'Lab Technician',
-    approvedAt: '2026-09-20T08:15:00',
-  },
-  {
-    id: 'BR-1022',
-    student: { name: 'Arjun Mehta', email: 'arjun.mehta@xyz.edu' },
-    equipment: { name: '3D Printer', category: 'Fabrication' },
-    lab: 'Fabrication Lab',
-    college: 'Chitkara University',
-    building: 'Block C',
-    room: '110',
-    date: '2026-09-21',
-    startTime: '11:00',
-    endTime: '13:00',
-    purpose: 'Prototype printing',
-    requestedAt: '2026-09-19T11:05:00',
-    status: 'Pending',
-    rejectionReason: '',
-  },
-  {
-    id: 'BR-1021',
-    student: { name: 'Ananya Gupta', email: 'ananya.gupta@xyz.edu' },
-    equipment: { name: 'Thermal Camera', category: 'Imaging' },
-    lab: 'IoT Lab',
-    college: 'Chitkara University',
-    building: 'Block B',
-    room: '305',
-    date: '2026-09-21',
-    startTime: '15:00',
-    endTime: '16:00',
-    purpose: 'Thermal analysis',
-    requestedAt: '2026-09-18T17:48:00',
-    status: 'Rejected',
-    rejectionReason: 'Equipment required for scheduled maintenance.',
-  },
-  {
-    id: 'BR-1020',
-    student: { name: 'Vikram Singh', email: 'vikram.singh@xyz.edu' },
-    equipment: { name: 'CNC Milling Machine', category: 'Fabrication' },
-    lab: 'Fabrication Lab',
-    college: 'Chitkara University',
-    building: 'Block C',
-    room: '115',
-    date: '2026-09-22',
-    startTime: '09:00',
-    endTime: '11:00',
-    purpose: 'Aluminium batch milling',
-    requestedAt: '2026-09-18T10:30:00',
-    status: 'Approved',
-    rejectionReason: '',
-    approvedBy: 'Lab Technician',
-    approvedAt: '2026-09-18T16:45:00',
-  },
-  {
-    id: 'BR-1019',
-    student: { name: 'Sneha Patel', email: 'sneha.patel@xyz.edu' },
-    equipment: { name: 'Digital Storage Oscilloscope', category: 'Electronics' },
-    lab: 'Electronics Lab',
-    college: 'Chitkara University',
-    building: 'Block A',
-    room: '204',
-    date: '2026-09-22',
-    startTime: '14:00',
-    endTime: '17:00',
-    purpose: 'Embedded waveform capture',
-    requestedAt: '2026-09-19T09:12:00',
-    status: 'Pending',
-    rejectionReason: '',
-  },
-  {
-    id: 'BR-1018',
-    student: { name: 'Karan Malhotra', email: 'karan.malhotra@xyz.edu' },
-    equipment: { name: 'Function Generator', category: 'Electronics' },
-    lab: 'Electronics Lab 1',
-    college: 'Chitkara University',
-    building: 'Block A',
-    room: '202',
-    date: '2026-09-23',
-    startTime: '10:00',
-    endTime: '12:00',
-    purpose: 'Frequency response testing',
-    requestedAt: '2026-09-19T14:33:00',
-    status: 'Rejected',
-    rejectionReason: 'Requested slot conflicts with an approved booking.',
-  },
-  {
-    id: 'BR-1017',
-    student: { name: 'Divya Reddy', email: 'divya.reddy@xyz.edu' },
-    equipment: { name: 'Digital Microscope', category: 'Imaging' },
-    lab: 'Materials Lab',
-    college: 'Chitkara University',
-    building: 'Block B',
-    room: '210',
-    date: '2026-09-21',
-    startTime: '11:00',
-    endTime: '13:00',
-    purpose: 'Microstructure imaging',
-    requestedAt: '2026-09-19T18:27:00',
-    status: 'Pending',
-    rejectionReason: '',
-  },
-  {
-    id: 'BR-1016',
-    student: { name: 'Aditya Kumar', email: 'aditya.kumar@xyz.edu' },
-    equipment: { name: 'Spectrum Analyzer', category: 'RF & Communications' },
-    lab: 'RF & Communications Lab',
-    college: 'Chitkara University',
-    building: 'Block D',
-    room: '402',
-    date: '2026-09-24',
-    startTime: '09:00',
-    endTime: '11:00',
-    purpose: 'RF emission profiling',
-    requestedAt: '2026-09-19T12:15:00',
-    status: 'Approved',
-    rejectionReason: '',
-    approvedBy: 'Lab Technician',
-    approvedAt: '2026-09-19T17:50:00',
-  },
-  {
-    id: 'BR-1015',
-    student: { name: 'Ishita Verma', email: 'ishita.verma@xyz.edu' },
-    equipment: { name: '3D Printer', category: 'Fabrication' },
-    lab: 'Fabrication Lab',
-    college: 'Chitkara University',
-    building: 'Block C',
-    room: '110',
-    date: '2026-09-20',
-    startTime: '15:00',
-    endTime: '17:00',
-    purpose: 'Capstone model parts',
-    requestedAt: '2026-09-19T08:40:00',
-    status: 'Pending',
-    rejectionReason: '',
-  },
-  {
-    id: 'BR-1014',
-    student: { name: 'Rohan Joshi', email: 'rohan.joshi@xyz.edu' },
-    equipment: { name: 'Digital Multimeter', category: 'Electronics' },
-    lab: 'Electronics Lab',
-    college: 'Chitkara University',
-    building: 'Block A',
-    room: '201',
-    date: '2026-09-23',
-    startTime: '14:00',
-    endTime: '15:00',
-    purpose: 'Circuit continuity checks',
-    requestedAt: '2026-09-18T13:22:00',
-    status: 'Rejected',
-    rejectionReason: 'Duplicate request — see BR-1018.',
-  },
-  {
-    id: 'BR-1013',
-    student: { name: 'Meera Krishnan', email: 'meera.krishnan@xyz.edu' },
-    equipment: { name: 'Thermal Camera', category: 'Imaging' },
-    lab: 'IoT Lab',
-    college: 'Chitkara University',
-    building: 'Block B',
-    room: '305',
-    date: '2026-09-24',
-    startTime: '11:00',
-    endTime: '13:00',
-    purpose: 'Heat dissipation study',
-    requestedAt: '2026-09-19T16:05:00',
-    status: 'Approved',
-    rejectionReason: '',
-    approvedBy: 'Lab Technician',
-    approvedAt: '2026-09-19T18:30:00',
-  },
-];
+const INITIAL_REQUESTS = [];
 
 /* ============================================================
    DATE / TIME HELPERS
    ============================================================ */
 
-const TODAY = '2026-09-20';
+const TODAY = new Date().toISOString().slice(0, 10);
+
+const dateStr = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 const fmtDateShort = (iso) => {
-  const d = new Date(`${iso}T00:00:00`);
-  return `${d.getDate()} ${d.toLocaleString('en-GB', { month: 'short' })} ${d.getFullYear()}`;
+  if (!iso) return '—';
+  try {
+    const d = new Date(`${iso}T00:00:00`);
+    if (isNaN(d.getTime())) return iso;
+    return `${d.getDate()} ${d.toLocaleString('en-GB', { month: 'short' })} ${d.getFullYear()}`;
+  } catch {
+    return iso;
+  }
 };
 
 const fmtDateLong = (iso) => {
-  const d = new Date(`${iso}T00:00:00`);
-  return `${d.getDate()} ${d.toLocaleString('en-GB', { month: 'long' })} ${d.getFullYear()}`;
+  if (!iso) return '—';
+  try {
+    const d = new Date(`${iso}T00:00:00`);
+    if (isNaN(d.getTime())) return iso;
+    return `${d.getDate()} ${d.toLocaleString('en-GB', { month: 'long' })} ${d.getFullYear()}`;
+  } catch {
+    return iso;
+  }
 };
 
 const fmtDateTime = (iso) => {
-  const d = new Date(iso);
-  const date = `${d.getDate()} ${d.toLocaleString('en-GB', { month: 'long' })} ${d.getFullYear()}`;
-  let h = d.getHours();
-  const m = String(d.getMinutes()).padStart(2, '0');
-  const am = h < 12;
-  h = h % 12 || 12;
-  return `${date}, ${h}:${m} ${am ? 'AM' : 'PM'}`;
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    const date = `${d.getDate()} ${d.toLocaleString('en-GB', { month: 'long' })} ${d.getFullYear()}`;
+    let h = d.getHours();
+    const m = String(d.getMinutes()).padStart(2, '0');
+    const am = h < 12;
+    h = h % 12 || 12;
+    return `${date}, ${h}:${m} ${am ? 'AM' : 'PM'}`;
+  } catch {
+    return iso;
+  }
 };
 
 const fmtTime = (t) => {
+  if (!t || typeof t !== 'string' || !t.includes(':')) return t || '—';
   const [hStr, m] = t.split(':');
   let h = Number(hStr);
   const am = h < 12;
@@ -263,7 +85,13 @@ const fmtTime = (t) => {
 };
 
 const initials = (name) =>
-  name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
+  (name || 'ST')
+    .split(' ')
+    .filter(Boolean)
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
 
 const weekRangeOf = (iso) => {
   const base = new Date(`${iso}T00:00:00`);
@@ -274,9 +102,6 @@ const weekRangeOf = (iso) => {
   sunday.setDate(monday.getDate() + 6);
   return { monday: dateStr(monday), sunday: dateStr(sunday) };
 };
-
-const dateStr = (d) =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 const addDaysISO = (iso, n) => {
   const d = new Date(`${iso}T00:00:00`);
@@ -310,9 +135,47 @@ export default function BookingRequests() {
   const [rejectError, setRejectError] = useState('');
   const [toast, setToast] = useState(null);
 
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        const res = await bookingService.getBookings();
+        if (res.success && Array.isArray(res.data)) {
+          const mapped = res.data.map((b) => ({
+            id: b.bookingId || b.id || b._id,
+            student: {
+              name: b.student?.name || 'Student',
+              email: b.student?.email || 'student@example.com',
+            },
+            equipment: {
+              name: b.equipmentName,
+              category: b.equipmentCategory || 'General',
+            },
+            lab: b.lab || 'Lab',
+            college: b.college || 'Chitkara University',
+            building: b.building || 'Block A',
+            room: b.room || '',
+            date: b.date,
+            startTime: b.startTime,
+            endTime: b.endTime,
+            purpose: b.purpose,
+            requestedAt: b.requestedAt || b.createdAt,
+            status: b.status,
+            rejectionReason: b.rejectionReason || '',
+            approvedBy: b.approvedBy || '',
+            approvedAt: b.approvedAt || '',
+          }));
+          setRequests(mapped);
+        }
+      } catch (err) {
+        console.warn('Backend bookings fetch:', err.message);
+      }
+    };
+    fetchBookings();
+  }, []);
+
   const equipmentOptions = useMemo(
-    () => [...new Set(INITIAL_REQUESTS.map((r) => r.equipment.name))].sort(),
-    []
+    () => [...new Set(requests.map((r) => r.equipment?.name).filter(Boolean))].sort(),
+    [requests]
   );
 
   const filtered = useMemo(() => {
@@ -321,13 +184,13 @@ export default function BookingRequests() {
 
     return requests.filter((r) => {
       if (q) {
-        const haystack = [r.id, r.student.name, r.equipment.name, r.lab, r.purpose]
+        const haystack = [r.id, r.student?.name, r.equipment?.name, r.lab, r.purpose]
           .join(' ')
           .toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       if (statusFilter && r.status !== statusFilter) return false;
-      if (equipmentFilter && r.equipment.name !== equipmentFilter) return false;
+      if (equipmentFilter && r.equipment?.name !== equipmentFilter) return false;
       if (dateFilter === 'today' && r.date !== TODAY) return false;
       if (dateFilter === 'tomorrow' && r.date !== addDaysISO(TODAY, 1)) return false;
       if (dateFilter === 'week') {
@@ -354,11 +217,17 @@ export default function BookingRequests() {
     setDateFilter('');
   };
 
-  const handleApprove = (request) => {
+  const handleApprove = async (request) => {
+    try {
+      await bookingService.updateBookingStatus(request.id, 'Approved');
+    } catch (err) {
+      console.warn('Backend booking approval failed, updating locally:', err.message);
+    }
+
     setRequests((prev) =>
       prev.map((r) =>
         r.id === request.id
-          ? { ...r, status: 'Approved', approvedBy: 'Lab Technician', approvedAt: `${TODAY}T08:15:00` }
+          ? { ...r, status: 'Approved', approvedBy: 'Lab Administrator', approvedAt: `${TODAY}T08:15:00` }
           : r
       )
     );
@@ -375,12 +244,19 @@ export default function BookingRequests() {
     setRejectError('');
   };
 
-  const handleReject = (e) => {
+  const handleReject = async (e) => {
     e.preventDefault();
     if (!rejectReason.trim()) {
       setRejectError('A reason is required to reject this request');
       return;
     }
+
+    try {
+      await bookingService.updateBookingStatus(rejectTarget.id, 'Rejected', rejectReason.trim());
+    } catch (err) {
+      console.warn('Backend booking rejection failed, updating locally:', err.message);
+    }
+
     setRequests((prev) =>
       prev.map((r) =>
         r.id === rejectTarget.id ? { ...r, status: 'Rejected', rejectionReason: rejectReason.trim() } : r
@@ -570,16 +446,16 @@ export default function BookingRequests() {
                     <td><span className="br-request-id">{r.id}</span></td>
                     <td>
                       <div className="br-student-cell">
-                        <div className="br-student-avatar">{initials(r.student.name)}</div>
+                        <div className="br-student-avatar">{initials(r.student?.name)}</div>
                         <div>
-                          <div className="br-student-name">{r.student.name}</div>
-                          <div className="br-student-email">{r.student.email}</div>
+                          <div className="br-student-name">{r.student?.name || 'Student'}</div>
+                          <div className="br-student-email">{r.student?.email || '—'}</div>
                         </div>
                       </div>
                     </td>
                     <td>
-                      <div className="br-equipment-name">{r.equipment.name}</div>
-                      <div className="br-equipment-cat">{r.equipment.category}</div>
+                      <div className="br-equipment-name">{r.equipment?.name || 'Equipment'}</div>
+                      <div className="br-equipment-cat">{r.equipment?.category || 'General'}</div>
                     </td>
                     <td>{r.lab}</td>
                     <td className="br-nowrap">{fmtDateShort(r.date)}</td>

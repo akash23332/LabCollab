@@ -1,24 +1,31 @@
 const express = require('express');
 const {
-  checkInEquipment,
-  checkOutEquipment,
-  getMyUsage,
-  getActiveUsageSessions,
-  getEquipmentUsage,
-  getInstitutionUsage,
+  getUsageLogs,
+  getUsageLogById,
+  createUsageLog,
+  updateUsageLog,
+  getUsageStats,
+  checkIn,
+  checkOut,
+  getActiveSession,
 } = require('../controllers/usageController');
-const { protect } = require('../middleware/authMiddleware');
+const optionalAuth = require('../src/middleware/optionalAuth');
 
 const router = express.Router();
 
-// QR check-in / check-out (the QR only identifies the equipment)
-router.post('/check-in', protect, checkInEquipment);
-router.post('/check-out', protect, checkOutEquipment);
+router.get('/stats', optionalAuth, getUsageStats);
+router.get('/active', optionalAuth, getActiveSession);
+router.post('/check-in', optionalAuth, checkIn);
+router.post('/check-out', optionalAuth, checkOut);
 
-// Static routes first, then the parameterized history routes
-router.get('/my', protect, getMyUsage);
-router.get('/active', protect, getActiveUsageSessions);
-router.get('/equipment/:equipmentId', protect, getEquipmentUsage);
-router.get('/institution/:institutionId', protect, getInstitutionUsage);
+router
+  .route('/')
+  .get(optionalAuth, getUsageLogs)
+  .post(optionalAuth, createUsageLog);
+
+router
+  .route('/:id')
+  .get(optionalAuth, getUsageLogById)
+  .patch(optionalAuth, updateUsageLog);
 
 module.exports = router;

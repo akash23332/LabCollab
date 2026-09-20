@@ -118,6 +118,7 @@ app.use('/api/labs', labRoutes);
 
 // Phase 6 Routes (Usage logs & analytics)
 app.use('/api/usage', usageRoutes);
+app.use('/api/usage-logs', usageRoutes);
 app.use('/api/analytics', analyticsRoutes);
 
 // Phase 7 Routes (Payments)

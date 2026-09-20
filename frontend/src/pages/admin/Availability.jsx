@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   Plus,
   Ban,
@@ -15,9 +15,11 @@ import {
   FlaskConical,
   Check,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
 import StatCard from '../../components/admin/StatCard';
-import { mockEquipment } from '../../data/adminMockData';
+import equipmentService from '../../services/equipmentService';
+import availabilityService from '../../services/availabilityService';
 import './Availability.css';
 
 /* ============================================================
@@ -91,135 +93,34 @@ const maintenanceClass = {
 };
 
 /* ============================================================
-   MOCK DATA  (shaped for a future API response)
-   ------------------------------------------------------------
-   weeklyTemplate : recurring availability per weekday (0 = Sun)
-   exceptions     : one-off technician actions (available/blocked/
-                    maintenance) keyed by date
-   bookings       : approved bookings — the system turns these
-                    into BOOKED periods automatically. Admins never
-                    create booked slots manually.
-   ============================================================ */
-
-const avail = (start, end) => ({ start, end, status: 'available' });
-
-const AVAILABILITY_CONFIG = {
-  'eq-1': {
-    weeklyTemplate: { default: [avail(10 * 60, 19 * 60)] },
-    exceptions: {
-      '2026-09-20': [
-        { id: 'exc-1-m', start: 17 * 60, end: 19 * 60, status: 'maintenance', reason: 'Quarterly sensor calibration' },
-      ],
-    },
-    bookings: [
-      {
-        id: 'bk-1',
-        date: '2026-09-20',
-        start: 12 * 60,
-        end: 14 * 60,
-        studentName: 'Rahul Sharma',
-        institution: 'XYZ University',
-        purpose: 'IoT Signal Analysis',
-      },
-      {
-        id: 'bk-2',
-        date: '2026-09-23',
-        start: 10 * 60,
-        end: 12 * 60,
-        studentName: 'Aman Kumar',
-        institution: 'XYZ University',
-        purpose: 'Embedded waveform capture',
-      },
-    ],
-  },
-  'eq-2': {
-    weeklyTemplate: { default: [avail(9 * 60, 17 * 60)] },
-    exceptions: {
-      '2026-09-21': [
-        { id: 'exc-2-b', start: 13 * 60, end: 15 * 60, status: 'blocked', reason: 'Filament resupply' },
-      ],
-    },
-    bookings: [
-      {
-        id: 'bk-3',
-        date: '2026-09-22',
-        start: 11 * 60,
-        end: 13 * 60,
-        studentName: 'Priya Nair',
-        institution: 'ABC College',
-        purpose: 'Prototype enclosure printing',
-      },
-    ],
-  },
-  'eq-3': {
-    weeklyTemplate: { default: [avail(9 * 60, 18 * 60)] },
-    exceptions: {
-      '2026-09-24': [
-        { id: 'exc-3-m', start: 9 * 60, end: 12 * 60, status: 'maintenance', reason: 'Objective lens servicing' },
-      ],
-    },
-    bookings: [
-      {
-        id: 'bk-4',
-        date: '2026-09-21',
-        start: 14 * 60,
-        end: 16 * 60,
-        studentName: 'Rahul Sharma',
-        institution: 'XYZ University',
-        purpose: 'Microstructure imaging',
-      },
-    ],
-  },
-  'eq-4': {
-    weeklyTemplate: { default: [avail(9 * 60, 17 * 60)] },
-    exceptions: {
-      '2026-09-20': [
-        { id: 'exc-4-m', start: 9 * 60, end: 17 * 60, status: 'maintenance', reason: 'Firmware repair in progress' },
-      ],
-    },
-    bookings: [],
-  },
-  'eq-5': {
-    weeklyTemplate: { default: [avail(8 * 60, 16 * 60)] },
-    exceptions: {},
-    bookings: [
-      {
-        id: 'bk-5',
-        date: '2026-09-22',
-        start: 9 * 60,
-        end: 11 * 60,
-        studentName: 'Vikram Singh',
-        institution: 'XYZ University',
-        purpose: 'Aluminium batch milling',
-      },
-    ],
-  },
-  'eq-6': {
-    weeklyTemplate: { default: [avail(10 * 60, 18 * 60)] },
-    exceptions: {},
-    bookings: [],
-  },
-};
-
-/* ============================================================
    SCHEDULE BUILDER
    Builds the final day timeline: base availability minus
    blocked/maintenance cuts, plus those cuts and bookings.
    ============================================================ */
 
 function getBaseTemplate(config, key) {
+  if (!config) return [{ start: 8 * 60, end: 20 * 60, status: 'available' }];
   const dow = parseKey(key).getDay();
-  const t = config.weeklyTemplate;
-  return (t[dow] || t.default || []).map((s) => ({ ...s }));
+  const t = config.weeklyTemplate || {};
+  const base = t[dow] || t.default || [{ start: 8 * 60, end: 20 * 60, status: 'available' }];
+  return base.map((s) => ({ ...s }));
 }
 
-function buildDaySchedule(equipmentId, key) {
-  const config = AVAILABILITY_CONFIG[equipmentId];
+function getExceptionsForDay(config, key) {
+  if (!config || !config.exceptions) return [];
+  if (Array.isArray(config.exceptions)) {
+    return config.exceptions.filter((e) => e.date === key);
+  }
+  return config.exceptions[key] || [];
+}
+
+function buildDaySchedule(config, key) {
   if (!config) return [];
 
   const base = getBaseTemplate(config, key);
+  const dayExceptions = getExceptionsForDay(config, key);
   const cuts = [
-    ...(config.exceptions[key] || []).map((s) => ({ ...s })),
+    ...dayExceptions.map((s) => ({ ...s })),
     ...(config.bookings || [])
       .filter((b) => b.date === key)
       .map((b) => ({ ...b, status: 'booked' })),
@@ -243,12 +144,11 @@ function buildDaySchedule(equipmentId, key) {
 }
 
 /* Raw slots (before subtraction) — used for overlap validation */
-function getAllSlotsRaw(equipmentId, key) {
-  const config = AVAILABILITY_CONFIG[equipmentId];
+function getAllSlotsRaw(config, key) {
   if (!config) return [];
   return [
     ...getBaseTemplate(config, key),
-    ...(config.exceptions[key] || []),
+    ...getExceptionsForDay(config, key),
     ...(config.bookings || []).filter((b) => b.date === key),
   ];
 }
@@ -263,21 +163,66 @@ const sumHours = (slots, statuses) =>
    ============================================================ */
 
 export default function Availability() {
-  const [equipmentId, setEquipmentId] = useState('eq-1');
+  const [equipmentList, setEquipmentList] = useState([]);
+  const [equipmentId, setEquipmentId] = useState('');
+  const [config, setConfig] = useState({ weeklyTemplate: { default: [{ start: 8 * 60, end: 20 * 60, status: 'available' }] }, exceptions: [], bookings: [] });
+  const [loading, setLoading] = useState(true);
+
   const [selectedDate, setSelectedDate] = useState(() => dateKey(new Date()));
   const [viewMode, setViewMode] = useState('day'); // 'day' | 'week'
   const [showAddModal, setShowAddModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
   const [toast, setToast] = useState(null);
 
-  const equipment = mockEquipment.find((e) => e.id === equipmentId) || mockEquipment[0];
-  const config = AVAILABILITY_CONFIG[equipmentId] || { exceptions: {}, bookings: [] };
+  // Fetch equipment list from backend
+  useEffect(() => {
+    const fetchEquipment = async () => {
+      try {
+        const res = await equipmentService.getEquipment();
+        const items = res.data?.data || res.data || [];
+        if (Array.isArray(items) && items.length > 0) {
+          setEquipmentList(items);
+          setEquipmentId(items[0].equipmentId || items[0].id);
+        }
+      } catch (err) {
+        console.error('Failed to load equipment:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEquipment();
+  }, []);
+
+  // Fetch availability for selected equipment
+  const loadAvailability = useCallback(async (eqId) => {
+    if (!eqId) return;
+    try {
+      const res = await availabilityService.getAvailability(eqId);
+      if (res.data?.success && res.data.data) {
+        setConfig(res.data.data);
+      } else if (res.data) {
+        setConfig(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to load availability:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (equipmentId) {
+      loadAvailability(equipmentId);
+    }
+  }, [equipmentId, loadAvailability]);
+
+  const currentEquipment = useMemo(() => {
+    return equipmentList.find((e) => (e.equipmentId || e.id) === equipmentId) || equipmentList[0] || null;
+  }, [equipmentList, equipmentId]);
 
   /* ---- Derived schedule data ---- */
 
   const daySchedule = useMemo(
-    () => buildDaySchedule(equipmentId, selectedDate),
-    [equipmentId, selectedDate]
+    () => buildDaySchedule(config, selectedDate),
+    [config, selectedDate]
   );
 
   const weekDays = useMemo(() => {
@@ -301,13 +246,13 @@ export default function Availability() {
   }, [daySchedule]);
 
   const dayBookings = useMemo(
-    () => (config.bookings || []).filter((b) => b.date === selectedDate),
+    () => (config?.bookings || []).filter((b) => b.date === selectedDate),
     [config, selectedDate]
   );
 
   const weekBookings = useMemo(
     () =>
-      (config.bookings || []).filter((b) => weekDays.some((d) => d.key === b.date)),
+      (config?.bookings || []).filter((b) => weekDays.some((d) => d.key === b.date)),
     [config, weekDays]
   );
 
@@ -328,25 +273,22 @@ export default function Availability() {
 
   /* ---- Modal form state ---- */
 
-  const emptyAddForm = {
-    equipmentId,
+  const [addForm, setAddForm] = useState({
+    equipmentId: '',
     date: selectedDate,
     start: '10:00',
     end: '12:00',
-  };
+  });
+  const [addErrors, setAddErrors] = useState({});
 
-  const emptyBlockForm = {
-    equipmentId,
+  const [blockForm, setBlockForm] = useState({
+    equipmentId: '',
     date: selectedDate,
     start: '09:00',
     end: '11:00',
     type: 'blocked',
     reason: '',
-  };
-
-  const [addForm, setAddForm] = useState(emptyAddForm);
-  const [addErrors, setAddErrors] = useState({});
-  const [blockForm, setBlockForm] = useState(emptyBlockForm);
+  });
   const [blockErrors, setBlockErrors] = useState({});
 
   const openAddModal = () => {
@@ -356,7 +298,7 @@ export default function Availability() {
   };
 
   const openBlockModal = () => {
-    setBlockForm({ ...emptyBlockForm, equipmentId, date: selectedDate });
+    setBlockForm({ equipmentId, date: selectedDate, start: '09:00', end: '11:00', type: 'blocked', reason: '' });
     setBlockErrors({});
     setShowBlockModal(true);
   };
@@ -377,7 +319,7 @@ export default function Availability() {
       } else if (start < LAB_OPEN || end > LAB_CLOSE) {
         errors.end = `Slot must be within lab hours (${fmt12h(LAB_OPEN)} – ${fmt12h(LAB_CLOSE)})`;
       } else {
-        const overlaps = getAllSlotsRaw(form.equipmentId, form.date).some(
+        const overlaps = getAllSlotsRaw(config, form.date).some(
           (s) => start < s.end && end > s.start
         );
         if (overlaps) {
@@ -391,46 +333,52 @@ export default function Availability() {
     return errors;
   };
 
-  const handleAddAvailability = (e) => {
+  const handleAddAvailability = async (e) => {
     e.preventDefault();
     const errors = validateSlot(addForm, false);
     setAddErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    const conf = AVAILABILITY_CONFIG[addForm.equipmentId];
-    if (!conf.exceptions[addForm.date]) conf.exceptions[addForm.date] = [];
-    conf.exceptions[addForm.date].push({
-      id: `exc-${Date.now()}`,
-      start: timeToMinutes(addForm.start),
-      end: timeToMinutes(addForm.end),
-      status: 'available',
-    });
-    setShowAddModal(false);
-    setToast({ type: 'success', message: 'Availability slot added successfully' });
+    try {
+      await availabilityService.addException(addForm.equipmentId, {
+        date: addForm.date,
+        start: timeToMinutes(addForm.start),
+        end: timeToMinutes(addForm.end),
+        status: 'available',
+      });
+      await loadAvailability(addForm.equipmentId);
+      setShowAddModal(false);
+      setToast({ type: 'success', message: 'Availability slot added successfully' });
+    } catch (err) {
+      setToast({ type: 'error', message: err.response?.data?.message || 'Failed to add availability' });
+    }
   };
 
-  const handleBlockSlot = (e) => {
+  const handleBlockSlot = async (e) => {
     e.preventDefault();
     const errors = validateSlot(blockForm, true);
     setBlockErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
-    const conf = AVAILABILITY_CONFIG[blockForm.equipmentId];
-    if (!conf.exceptions[blockForm.date]) conf.exceptions[blockForm.date] = [];
-    conf.exceptions[blockForm.date].push({
-      id: `exc-${Date.now()}`,
-      start: timeToMinutes(blockForm.start),
-      end: timeToMinutes(blockForm.end),
-      status: blockForm.type,
-      reason: blockForm.reason.trim(),
-    });
-    setShowBlockModal(false);
-    setToast({
-      type: 'success',
-      message: blockForm.type === 'maintenance'
-        ? 'Maintenance period scheduled'
-        : 'Slot blocked successfully',
-    });
+    try {
+      await availabilityService.addException(blockForm.equipmentId, {
+        date: blockForm.date,
+        start: timeToMinutes(blockForm.start),
+        end: timeToMinutes(blockForm.end),
+        status: blockForm.type,
+        reason: blockForm.reason.trim(),
+      });
+      await loadAvailability(blockForm.equipmentId);
+      setShowBlockModal(false);
+      setToast({
+        type: 'success',
+        message: blockForm.type === 'maintenance'
+          ? 'Maintenance period scheduled'
+          : 'Slot blocked successfully',
+      });
+    } catch (err) {
+      setToast({ type: 'error', message: err.response?.data?.message || 'Failed to block slot' });
+    }
   };
 
   /* ---- Render helpers ---- */
@@ -445,16 +393,11 @@ export default function Availability() {
     (_, i) => LAB_OPEN + i * 60
   );
 
-  const equipmentName = (id) => {
-    const eq = mockEquipment.find((e) => e.id === id);
-    return eq ? eq.equipmentName : 'Unknown equipment';
-  };
-
   const renderSlotBlock = (slot, compact = false) => {
     const isBooking = slot.status === 'booked';
     return (
       <div
-        key={slot.id}
+        key={slot.id || `slot-${slot.start}-${slot.end}`}
         className={`avail-block ${slot.status} ${compact ? 'compact' : ''}`}
         style={blockPos(slot)}
       >
@@ -474,6 +417,14 @@ export default function Availability() {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="admin-availability-page" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '300px' }}>
+        <Loader2 size={32} className="admin-spinner" style={{ animation: 'spin 1s linear infinite' }} />
+      </div>
+    );
+  }
+
   return (
     <div className="admin-availability-page">
       {/* ---------- Page header ---------- */}
@@ -483,81 +434,91 @@ export default function Availability() {
           Manage when laboratory equipment is available for booking.
         </p>
         <div className="admin-page-header-actions">
-          <button className="admin-btn admin-btn-primary" onClick={openAddModal}>
+          <button className="admin-btn admin-btn-primary" onClick={openAddModal} disabled={!equipmentId}>
             <Plus size={18} /> Add Availability
           </button>
-          <button className="admin-btn admin-btn-secondary" onClick={openBlockModal}>
+          <button className="admin-btn admin-btn-secondary" onClick={openBlockModal} disabled={!equipmentId}>
             <Ban size={18} /> Block Slot
           </button>
         </div>
       </div>
 
       {/* ---------- Equipment selector + info panel ---------- */}
-      <div className="admin-card avail-equipment-bar">
-        <div className="avail-equipment-select">
-          <label className="admin-form-label" htmlFor="avail-equipment">
-            Equipment
-          </label>
-          <select
-            id="avail-equipment"
-            className="admin-form-select"
-            value={equipmentId}
-            onChange={(e) => setEquipmentId(e.target.value)}
-          >
-            {mockEquipment.map((eq) => (
-              <option key={eq.id} value={eq.id}>
-                {eq.equipmentName} — {eq.equipmentNumber}
-              </option>
-            ))}
-          </select>
+      {currentEquipment ? (
+        <div className="admin-card avail-equipment-bar">
+          <div className="avail-equipment-select">
+            <label className="admin-form-label" htmlFor="avail-equipment">
+              Equipment
+            </label>
+            <select
+              id="avail-equipment"
+              className="admin-form-select"
+              value={equipmentId}
+              onChange={(e) => setEquipmentId(e.target.value)}
+            >
+              {equipmentList.map((eq) => (
+                <option key={eq.equipmentId || eq.id} value={eq.equipmentId || eq.id}>
+                  {eq.equipmentName} — {eq.equipmentNumber || eq.equipmentId || eq.id}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="avail-equipment-divider" aria-hidden="true" />
+
+          <div className="avail-equipment-info">
+            <div className="avail-equipment-identity">
+              <div className="avail-equipment-icon">
+                <FlaskConical size={22} />
+              </div>
+              <div>
+                <h2 className="avail-equipment-name">{currentEquipment.equipmentName}</h2>
+                <p className="avail-equipment-number">{currentEquipment.equipmentNumber || currentEquipment.equipmentId}</p>
+              </div>
+            </div>
+
+            <div className="avail-equipment-meta">
+              <div className="avail-equipment-meta-item">
+                <Building2 size={14} />
+                <span>{currentEquipment.collegeName || currentEquipment.collegeId || 'Campus Lab'}</span>
+              </div>
+              <div className="avail-equipment-meta-item">
+                <FlaskConical size={14} />
+                <span>{currentEquipment.labName || 'General Lab'}</span>
+              </div>
+            </div>
+
+            <div className="avail-equipment-badges">
+              <div className="avail-equipment-badge-group">
+                <span className="avail-equipment-badge-label">Status</span>
+                <span className={`admin-status-badge ${statusClass[currentEquipment.status] || 'inactive'}`}>
+                  {currentEquipment.status}
+                </span>
+              </div>
+              <div className="avail-equipment-badge-group">
+                <span className="avail-equipment-badge-label">Condition</span>
+                <span className={`admin-status-badge ${conditionClass[currentEquipment.condition] || 'good'}`}>
+                  {currentEquipment.condition || 'Good'}
+                </span>
+              </div>
+              <div className="avail-equipment-badge-group">
+                <span className="avail-equipment-badge-label">Maintenance</span>
+                <span className={`admin-status-badge ${maintenanceClass[currentEquipment.maintenanceStatus] || 'up-to-date'}`}>
+                  {currentEquipment.maintenanceStatus || 'Up to Date'}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
-
-        <div className="avail-equipment-divider" aria-hidden="true" />
-
-        <div className="avail-equipment-info">
-          <div className="avail-equipment-identity">
-            <div className="avail-equipment-icon">
-              <FlaskConical size={22} />
-            </div>
-            <div>
-              <h2 className="avail-equipment-name">{equipment.equipmentName}</h2>
-              <p className="avail-equipment-number">{equipment.equipmentNumber}</p>
-            </div>
-          </div>
-
-          <div className="avail-equipment-meta">
-            <div className="avail-equipment-meta-item">
-              <Building2 size={14} />
-              <span>{equipment.collegeId}</span>
-            </div>
-            <div className="avail-equipment-meta-item">
-              <FlaskConical size={14} />
-              <span>{equipment.labName}</span>
-            </div>
-          </div>
-
-          <div className="avail-equipment-badges">
-            <div className="avail-equipment-badge-group">
-              <span className="avail-equipment-badge-label">Status</span>
-              <span className={`admin-status-badge ${statusClass[equipment.status] || 'inactive'}`}>
-                {equipment.status}
-              </span>
-            </div>
-            <div className="avail-equipment-badge-group">
-              <span className="avail-equipment-badge-label">Condition</span>
-              <span className={`admin-status-badge ${conditionClass[equipment.condition] || 'fair'}`}>
-                {equipment.condition}
-              </span>
-            </div>
-            <div className="avail-equipment-badge-group">
-              <span className="avail-equipment-badge-label">Maintenance</span>
-              <span className={`admin-status-badge ${maintenanceClass[equipment.maintenanceStatus] || 'up-to-date'}`}>
-                {equipment.maintenanceStatus}
-              </span>
-            </div>
+      ) : (
+        <div className="admin-card">
+          <div className="admin-empty-state">
+            <FlaskConical size={40} />
+            <h3 className="admin-empty-state-title">No equipment found in database</h3>
+            <p className="admin-empty-state-message">Add instruments in the Equipment section to manage availability.</p>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ---------- Summary cards ---------- */}
       <div className="admin-stats-grid avail-summary-grid">
@@ -693,7 +654,7 @@ export default function Availability() {
             </div>
             <div className="avail-week-grid">
               {weekDays.map(({ key, date }) => {
-                const slots = buildDaySchedule(equipmentId, key);
+                const slots = buildDaySchedule(config, key);
                 const isSel = key === selectedDate;
                 const isDayToday = key === dateKey(new Date());
                 return (
@@ -744,7 +705,7 @@ export default function Availability() {
         <div className="avail-bookings-list">
           {(viewMode === 'day' ? dayBookings : weekBookings).length > 0 ? (
             (viewMode === 'day' ? dayBookings : weekBookings).map((b) => (
-              <div key={b.id} className="avail-booking-row">
+              <div key={b.id || b._id} className="avail-booking-row">
                 <div className="avail-booking-when">
                   <span className="avail-booking-date">{fmtDateShort(parseKey(b.date))}</span>
                   <span className="avail-booking-time">
@@ -753,16 +714,16 @@ export default function Availability() {
                 </div>
                 <div className="avail-booking-who">
                   <div className="avail-booking-avatar">
-                    {b.studentName.split(' ').map((p) => p[0]).slice(0, 2).join('')}
+                    {(b.studentName || 'Student').split(' ').map((p) => p[0]).slice(0, 2).join('')}
                   </div>
                   <div>
-                    <p className="avail-booking-student">{b.studentName}</p>
+                    <p className="avail-booking-student">{b.studentName || 'Student'}</p>
                     <p className="avail-booking-inst">
-                      <Building2 size={12} /> {b.institution}
+                      <Building2 size={12} /> {b.institution || 'Partner University'}
                     </p>
                   </div>
                 </div>
-                <p className="avail-booking-purpose">{b.purpose}</p>
+                <p className="avail-booking-purpose">{b.purpose || 'Laboratory Research'}</p>
                 <span className="admin-status-badge booked">Booked</span>
               </div>
             ))
@@ -805,9 +766,9 @@ export default function Availability() {
                       value={addForm.equipmentId}
                       onChange={(e) => setAddForm((f) => ({ ...f, equipmentId: e.target.value }))}
                     >
-                      {mockEquipment.map((eq) => (
-                        <option key={eq.id} value={eq.id}>
-                          {eq.equipmentName} — {eq.equipmentNumber}
+                      {equipmentList.map((eq) => (
+                        <option key={eq.equipmentId || eq.id} value={eq.equipmentId || eq.id}>
+                          {eq.equipmentName} — {eq.equipmentNumber || eq.equipmentId || eq.id}
                         </option>
                       ))}
                     </select>
@@ -902,9 +863,9 @@ export default function Availability() {
                       value={blockForm.equipmentId}
                       onChange={(e) => setBlockForm((f) => ({ ...f, equipmentId: e.target.value }))}
                     >
-                      {mockEquipment.map((eq) => (
-                        <option key={eq.id} value={eq.id}>
-                          {eq.equipmentName} — {eq.equipmentNumber}
+                      {equipmentList.map((eq) => (
+                        <option key={eq.equipmentId || eq.id} value={eq.equipmentId || eq.id}>
+                          {eq.equipmentName} — {eq.equipmentNumber || eq.equipmentId || eq.id}
                         </option>
                       ))}
                     </select>

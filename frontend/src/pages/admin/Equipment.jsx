@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
-import { Plus, Search, Edit, Trash2, Eye, X, Loader2 } from 'lucide-react';
-import { mockEquipment } from '../../data/adminMockData';
+import { useState, useMemo, useEffect } from 'react';
+import { Plus, Search, Edit, Trash2, Eye, X, Loader2, Sparkles, RefreshCw } from 'lucide-react';
+import { equipmentService } from '../../services/equipmentService';
 import './Equipment.css';
 
 const categories = ['Electronics', 'Fabrication', 'Imaging', 'RF & Communications', 'Mechanical', 'Chemical', 'Optical'];
@@ -31,6 +31,10 @@ const initialFormData = {
 };
 
 export default function Equipment() {
+  const [equipmentData, setEquipmentData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncingAI, setIsSyncingAI] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -40,18 +44,45 @@ export default function Equipment() {
   const [formData, setFormData] = useState(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const fetchEquipment = async () => {
+    try {
+      setIsLoading(true);
+      const res = await equipmentService.getEquipment({ limit: 200 });
+      if (res.success && Array.isArray(res.data)) {
+        setEquipmentData(res.data);
+      }
+    } catch (err) {
+      console.warn('Backend equipment fetch error:', err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEquipment();
+  }, []);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   const filteredEquipment = useMemo(() => {
-    return mockEquipment.filter((eq) => {
+    return equipmentData.filter((eq) => {
+      const name = eq.equipmentName || '';
+      const number = eq.equipmentNumber || eq.equipmentId || '';
+      const cat = eq.category || '';
+      const lab = eq.labName || '';
       const matchesSearch =
-        eq.equipmentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        eq.equipmentNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        eq.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        eq.labName.toLowerCase().includes(searchQuery.toLowerCase());
+        name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        cat.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lab.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = !categoryFilter || eq.category === categoryFilter;
       const matchesStatus = !statusFilter || eq.status === statusFilter;
       return matchesSearch && matchesCategory && matchesStatus;
     });
-  }, [searchQuery, categoryFilter, statusFilter]);
+  }, [equipmentData, searchQuery, categoryFilter, statusFilter]);
 
   const handleTagInput = (field, value) => {
     const tags = value.split(',').map(t => t.trim()).filter(Boolean);
@@ -112,29 +143,111 @@ export default function Equipment() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    console.log('Equipment saved:', formData);
-    closeModal();
-    setIsSubmitting(false);
+    try {
+      if (editingEquipment) {
+        const id = editingEquipment.equipmentId || editingEquipment.id || editingEquipment._id;
+        const res = await equipmentService.updateEquipment(id, formData);
+        if (res.success && res.data) {
+          setEquipmentData(prev => prev.map(item => (item.equipmentId === id || item.id === id ? res.data : item)));
+          showToast('Equipment updated successfully');
+        }
+      } else {
+        const res = await equipmentService.createEquipment(formData);
+        if (res.success && res.data) {
+          setEquipmentData(prev => [res.data, ...prev]);
+          showToast('New equipment added and synced with AI search database');
+        }
+      }
+      closeModal();
+    } catch (err) {
+      console.error('Error saving equipment:', err);
+      // Fallback local update
+      if (editingEquipment) {
+        setEquipmentData(prev => prev.map(item => item.id === editingEquipment.id ? { ...item, ...formData } : item));
+      } else {
+        const newId = `eq-${Date.now()}`;
+        setEquipmentData(prev => [{ ...formData, id: newId, equipmentId: newId, equipmentNumber: newId }, ...prev]);
+      }
+      closeModal();
+      showToast('Equipment saved (offline mode)');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const confirmDelete = (equipment) => {
     setShowDeleteConfirm(equipment);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (showDeleteConfirm) {
-      console.log('Delete equipment:', showDeleteConfirm.id);
+      const id = showDeleteConfirm.equipmentId || showDeleteConfirm.id || showDeleteConfirm._id;
+      try {
+        await equipmentService.deleteEquipment(id);
+        showToast(`Equipment ${id} deleted`);
+      } catch (err) {
+        console.warn('Backend delete failed, removing locally:', err);
+      }
+      setEquipmentData(prev => prev.filter(item => (item.equipmentId !== id && item.id !== id)));
       setShowDeleteConfirm(null);
+    }
+  };
+
+  const handleSyncAIDemand = async () => {
+    setIsSyncingAI(true);
+    try {
+      const res = await equipmentService.syncDemandPredictions();
+      showToast(res.message || 'AI Demand Predictions synced successfully');
+      await fetchEquipment();
+    } catch (err) {
+      showToast('AI Demand sync failed: ' + err.message);
+    } finally {
+      setIsSyncingAI(false);
     }
   };
 
   return (
     <div className="admin-equipment-page">
+      {toastMessage && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          background: '#0f172a',
+          color: '#38bdf8',
+          padding: '12px 20px',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          zIndex: 9999,
+          fontWeight: '500',
+          border: '1px solid rgba(56, 189, 248, 0.3)',
+        }}>
+          {toastMessage}
+        </div>
+      )}
+
       <div className="admin-page-header">
         <h1 className="admin-page-title-main">Equipment</h1>
-        <p className="admin-page-subtitle">Manage laboratory equipment and its operational status.</p>
-        <div className="admin-page-header-actions">
+        <p className="admin-page-subtitle">Manage laboratory equipment, AI demand forecasts, and operational status.</p>
+        <div className="admin-page-header-actions" style={{ display: 'flex', gap: '10px' }}>
+          <button
+            className="admin-btn"
+            style={{
+              background: 'rgba(56, 189, 248, 0.1)',
+              color: '#38bdf8',
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+            onClick={handleSyncAIDemand}
+            disabled={isSyncingAI}
+            title="Sync AI Demand Predictions from model"
+          >
+            {isSyncingAI ? <RefreshCw size={16} className="animate-spin" /> : <Sparkles size={16} />}
+            Sync AI Demand
+          </button>
           <button className="admin-btn admin-btn-primary" onClick={openAddModal}>
             <Plus size={18} /> Add Equipment
           </button>
@@ -196,6 +309,7 @@ export default function Equipment() {
                   <th scope="col">Department</th>
                   <th scope="col">Lab</th>
                   <th scope="col">Status</th>
+                  <th scope="col">AI Demand</th>
                   <th scope="col">Condition</th>
                   <th scope="col">Maintenance</th>
                   <th scope="col">Actions</th>
@@ -203,7 +317,7 @@ export default function Equipment() {
               </thead>
               <tbody>
                 {filteredEquipment.map((eq) => (
-                  <tr key={eq.id}>
+                  <tr key={eq.equipmentId || eq.id || eq._id}>
                     <td>
                       <div className="admin-table-cell-equipment">
                         <div className="admin-table-equipment-icon">
@@ -215,19 +329,39 @@ export default function Equipment() {
                         </div>
                         <div>
                           <div className="admin-table-equipment-name">{eq.equipmentName}</div>
-                          <div className="admin-table-equipment-number">{eq.equipmentNumber}</div>
+                          <div className="admin-table-equipment-number">{eq.equipmentNumber || eq.equipmentId}</div>
                         </div>
                       </div>
                     </td>
-                    <td>{eq.equipmentNumber}</td>
+                    <td>{eq.equipmentNumber || eq.equipmentId}</td>
                     <td>{eq.category}</td>
-                    <td>{eq.collegeId}</td>
+                    <td>{eq.collegeName || eq.collegeId}</td>
                     <td>{eq.department || '—'}</td>
                     <td>{eq.labName}</td>
                     <td>
                       <span className={`admin-status-badge ${eq.status.toLowerCase()}`}>
                         {eq.status}
                       </span>
+                    </td>
+                    <td>
+                      {eq.demandPrediction?.demandLevel ? (
+                        <span style={{
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          background: eq.demandPrediction.demandLevel === 'HIGH' ? 'rgba(239, 68, 68, 0.15)' : eq.demandPrediction.demandLevel === 'MEDIUM' ? 'rgba(234, 179, 8, 0.15)' : 'rgba(34, 197, 94, 0.15)',
+                          color: eq.demandPrediction.demandLevel === 'HIGH' ? '#f87171' : eq.demandPrediction.demandLevel === 'MEDIUM' ? '#facc15' : '#4ade80',
+                          border: `1px solid ${eq.demandPrediction.demandLevel === 'HIGH' ? 'rgba(239, 68, 68, 0.3)' : eq.demandPrediction.demandLevel === 'MEDIUM' ? 'rgba(234, 179, 8, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`
+                        }}>
+                          {eq.demandPrediction.demandLevel} ({eq.demandPrediction.predictedBookings})
+                        </span>
+                      ) : (
+                        <span style={{ color: '#64748b', fontSize: '12px' }}>—</span>
+                      )}
                     </td>
                     <td>
                       <span className={`admin-status-badge ${eq.condition.toLowerCase()}`}>

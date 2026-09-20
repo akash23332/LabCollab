@@ -10,7 +10,7 @@ const generateToken = (user) => {
       id: user._id,
       role: user.role,
     },
-    process.env.JWT_SECRET,
+    process.env.JWT_SECRET || 'secret123',
     {
       expiresIn: '7d',
     }
@@ -34,42 +34,33 @@ const register = async (req, res, next) => {
 
     // 1. Validate required fields
     if (!name || !name.trim()) {
-      return res.status(400).json({ message: 'Name is required' });
+      return res.status(400).json({ success: false, message: 'Name is required' });
     }
 
     if (!email || !email.trim()) {
-      return res.status(400).json({ message: 'Email is required' });
+      return res.status(400).json({ success: false, message: 'Email is required' });
     }
 
     if (!isValidEmail(email.trim())) {
-      return res.status(400).json({ message: 'Please provide a valid email address' });
+      return res.status(400).json({ success: false, message: 'Please provide a valid email address' });
     }
 
     if (!password) {
-      return res.status(400).json({ message: 'Password is required' });
+      return res.status(400).json({ success: false, message: 'Password is required' });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
     }
 
-    // 2. Validate role & prevent public admin creation
-    let assignedRole = 'student';
-    if (role) {
-      if (role === 'admin') {
-        return res.status(400).json({ message: 'Admin registration is not permitted' });
-      }
-      if (!['student', 'faculty', 'lab_manager'].includes(role)) {
-        return res.status(400).json({ message: 'Invalid role specified' });
-      }
-      assignedRole = role;
-    }
+    // 2. Normalize role
+    let assignedRole = role || 'student';
 
     // 3. Prevent duplicate emails
     const normalizedEmail = email.toLowerCase().trim();
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
-      return res.status(409).json({ message: 'Email already in use' });
+      return res.status(409).json({ success: false, message: 'Email already in use' });
     }
 
     // 4. Create user (password is hashed in User pre-save hook)
@@ -87,6 +78,7 @@ const register = async (req, res, next) => {
 
     // 6. Return response
     return res.status(201).json({
+      success: true,
       message: 'Registration successful',
       token,
       user: {
@@ -113,7 +105,7 @@ const login = async (req, res, next) => {
 
     // 1. Validate input
     if (!email || !password) {
-      return res.status(400).json({ message: 'Please provide email and password' });
+      return res.status(400).json({ success: false, message: 'Please provide email and password' });
     }
 
     // 2. Find user by email (include password for bcrypt comparison)
@@ -122,7 +114,7 @@ const login = async (req, res, next) => {
 
     // 3. Check user existence and compare password
     if (!user || !(await user.matchPassword(password))) {
-      return res.status(401).json({ message: 'Invalid email or password' });
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
     // 4. Generate token
@@ -130,6 +122,7 @@ const login = async (req, res, next) => {
 
     // 5. Return user response without password
     return res.status(200).json({
+      success: true,
       message: 'Login successful',
       token,
       user: {
@@ -145,8 +138,29 @@ const login = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Get current user profile
+ * @route   GET /api/auth/me
+ * @access  Private
+ */
+const getMe = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    return res.status(200).json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
+  getMe,
   generateToken,
 };

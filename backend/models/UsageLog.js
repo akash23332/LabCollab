@@ -1,117 +1,131 @@
 const mongoose = require('mongoose');
 
-/**
- * Phase 6 - physical usage record created by a QR check-in.
- *
- * A UsageLog is the *actual* usage of equipment; the Booking keeps the planned
- * window. The two are deliberately separate: planned duration is never
- * overwritten by actual usage.
- *
- * `booking` is unique, which is both the business rule ("one booking -> one
- * usage record") and the race-condition guard: two concurrent check-ins can
- * never create two active logs, the second insert fails on the unique index.
- *
- * Every timestamp is written by the backend. Nothing here is client-supplied.
- */
 const usageLogSchema = new mongoose.Schema(
   {
-    booking: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Booking',
-      required: [true, 'Booking is required'],
+    logId: {
+      type: String,
       unique: true,
+      sparse: true,
+      index: true,
+      default: function () {
+        return `LOG-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      },
+    },
+    booking: {
+      type: mongoose.Schema.Types.Mixed,
+      ref: 'Booking',
+      default: null,
     },
     user: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.Mixed,
       ref: 'User',
-      required: [true, 'User is required'],
+      default: null,
     },
     equipment: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.Mixed,
       ref: 'Equipment',
-      required: [true, 'Equipment is required'],
+      default: null,
     },
     institution: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.Mixed,
       ref: 'Institution',
-      required: [true, 'Institution is required'],
+      default: null,
+    },
+    equipmentId: {
+      type: String,
+      default: '',
+    },
+    equipmentName: {
+      type: String,
+      default: 'Laboratory Instrument',
+    },
+    equipmentNumber: {
+      type: String,
+      default: '',
+    },
+    userId: {
+      type: String,
+      default: '',
+    },
+    studentName: {
+      type: String,
+      default: 'Student User',
+    },
+    studentEmail: {
+      type: String,
+      default: '',
+    },
+    college: {
+      type: String,
+      default: 'Chitkara University',
+    },
+    lab: {
+      type: String,
+      default: 'General Lab',
+    },
+    department: {
+      type: String,
+      default: 'Engineering',
+    },
+    sessionType: {
+      type: String,
+      default: 'Research',
+    },
+    date: {
+      type: mongoose.Schema.Types.Mixed,
+      default: () => new Date().toISOString().split('T')[0],
+    },
+    startTime: {
+      type: String,
+      default: '10:00',
+    },
+    endTime: {
+      type: String,
+      default: '12:00',
+    },
+    durationHours: {
+      type: Number,
+      default: 2,
     },
     checkInTime: {
       type: Date,
-      required: [true, 'checkInTime is required'],
+      default: Date.now,
     },
     checkOutTime: {
       type: Date,
       default: null,
     },
-    /** (checkOutTime - checkInTime) / 60000, calculated server side. */
     actualDurationMinutes: {
       type: Number,
       default: null,
-      min: [0, 'actualDurationMinutes cannot be negative'],
     },
     status: {
       type: String,
-      enum: {
-        values: ['active', 'completed'],
-        message: 'status must be one of: active, completed',
-      },
-      default: 'active',
+      default: 'Completed',
     },
-    checkInMethod: {
-      type: String,
-      enum: { values: ['qr'], message: 'checkInMethod must be: qr' },
-      default: 'qr',
-    },
-    checkOutMethod: {
-      type: String,
-      enum: { values: ['qr'], message: 'checkOutMethod must be: qr' },
-      default: 'qr',
+    cost: {
+      type: Number,
+      default: 500,
     },
     notes: {
       type: String,
       default: '',
-      trim: true,
+    },
+    operator: {
+      type: String,
+      default: 'Self-Operated',
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
 
-// `booking: { unique: true }` above is the enforcement (and the race guard) -
-// no second index declaration here to avoid a duplicate index.
-
-// "my usage history" and "my active session"
-usageLogSchema.index({ user: 1, status: 1, checkInTime: -1 });
-
-// equipment usage history + per-equipment analytics
-usageLogSchema.index({ equipment: 1, checkInTime: -1 });
-usageLogSchema.index({ equipment: 1, status: 1 });
-
-// institution analytics
-usageLogSchema.index({ institution: 1, checkInTime: -1 });
-
-usageLogSchema.set('toJSON', {
-  transform: (doc, ret) => {
-    ret.id = ret._id;
-    delete ret.__v;
-    return ret;
-  },
-});
-
-usageLogSchema.set('toObject', {
-  transform: (doc, ret) => {
-    ret.id = ret._id;
-    delete ret.__v;
-    return ret;
-  },
+usageLogSchema.virtual('id').get(function () {
+  return this.logId || this._id.toHexString();
 });
 
 const UsageLog = mongoose.model('UsageLog', usageLogSchema);
-
-/** Shared populate projections so user/booking data is never over-exposed. */
-UsageLog.EQUIPMENT_FIELDS = 'name category pricePerHour location status isVerified institution';
-UsageLog.INSTITUTION_FIELDS = 'name type city state isVerified';
-UsageLog.USER_FIELDS = 'name email institution role';
-UsageLog.BOOKING_FIELDS = 'date startTime endTime duration totalAmount purpose status';
-
 module.exports = UsageLog;

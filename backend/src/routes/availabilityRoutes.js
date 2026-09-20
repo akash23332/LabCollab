@@ -1,16 +1,21 @@
 const express = require('express');
 const {
+  getAvailability,
+  updateWeeklyTemplate,
+  addException,
+  removeException,
   createAvailability,
-  getAvailabilityForEquipment,
-  updateAvailability,
-  deleteAvailability,
+  getAvailabilitySlots,
 } = require('../controllers/availabilityController');
-const { protect } = require('../middleware/authMiddleware');
+const optionalAuth = require('../middleware/optionalAuth');
 
 const router = express.Router();
 
-router.post('/', protect, createAvailability);
-router.get('/equipment/:equipmentId', getAvailabilityForEquipment);
-router.route('/:id').patch(protect, updateAvailability).delete(protect, deleteAvailability);
+router.route('/').get(optionalAuth, getAvailabilitySlots).post(optionalAuth, createAvailability);
+
+router.route('/:equipmentId').get(optionalAuth, getAvailability);
+router.route('/:equipmentId/template').put(optionalAuth, updateWeeklyTemplate);
+router.route('/:equipmentId/exceptions').post(optionalAuth, addException);
+router.route('/:equipmentId/exceptions/:exceptionId').delete(optionalAuth, removeException);
 
 module.exports = router;

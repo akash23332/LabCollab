@@ -1,32 +1,35 @@
 const express = require('express');
 const {
-  createBooking,
-  getMyBookings,
+  getAllBookings,
   getBookingById,
-  getInstitutionBookingRequests,
+  createBooking,
+  updateBookingStatus,
   approveBooking,
   rejectBooking,
   cancelBooking,
+  getMyBookings,
+  getInstitutionBookingRequests,
   getEquipmentBookingHistory,
+  exportDemandHistory,
 } = require('../controllers/bookingController');
-const { protect } = require('../middleware/authMiddleware');
+const optionalAuth = require('../src/middleware/optionalAuth');
 
 const router = express.Router();
 
-// Booking creation & user bookings
-router.post('/', protect, createBooking);
-router.get('/my', protect, getMyBookings);
+router.get('/export-demand-history', exportDemandHistory);
+router.get('/my', optionalAuth, getMyBookings);
+router.get('/requests', optionalAuth, getInstitutionBookingRequests);
+router.get('/equipment/:equipmentId', optionalAuth, getEquipmentBookingHistory);
 
-// Institution / lab manager booking requests
-router.get('/requests', protect, getInstitutionBookingRequests);
+router
+  .route('/')
+  .get(optionalAuth, getAllBookings)
+  .post(optionalAuth, createBooking);
 
-// Equipment specific booking history
-router.get('/equipment/:equipmentId', protect, getEquipmentBookingHistory);
-
-// Single booking management
-router.get('/:id', protect, getBookingById);
-router.patch('/:id/approve', protect, approveBooking);
-router.patch('/:id/reject', protect, rejectBooking);
-router.patch('/:id/cancel', protect, cancelBooking);
+router.get('/:id', optionalAuth, getBookingById);
+router.patch('/:id/status', optionalAuth, updateBookingStatus);
+router.patch('/:id/approve', optionalAuth, approveBooking);
+router.patch('/:id/reject', optionalAuth, rejectBooking);
+router.patch('/:id/cancel', optionalAuth, cancelBooking);
 
 module.exports = router;

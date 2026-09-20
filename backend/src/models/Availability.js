@@ -2,22 +2,50 @@ const mongoose = require('mongoose');
 
 const availabilitySchema = new mongoose.Schema(
   {
+    // Admin template fields
+    equipmentId: {
+      type: String,
+      sparse: true,
+      index: true,
+      trim: true,
+    },
+    weeklyTemplate: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {
+        default: [{ start: 8 * 60, end: 20 * 60, status: 'available' }],
+      },
+    },
+    exceptions: [
+      {
+        id: { type: String, required: true },
+        date: { type: String, required: true },
+        start: { type: Number, required: true },
+        end: { type: Number, required: true },
+        status: {
+          type: String,
+          enum: ['blocked', 'maintenance', 'available'],
+          default: 'blocked',
+        },
+        reason: { type: String, default: '' },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    // Individual slot fields (for collaborator tests and bookings)
     equipment: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.Mixed,
       ref: 'Equipment',
-      required: true,
+      sparse: true,
+      index: true,
     },
     date: {
-      type: Date,
-      required: true,
+      type: mongoose.Schema.Types.Mixed,
     },
     startTime: {
       type: String,
-      required: true,
     },
     endTime: {
       type: String,
-      required: true,
     },
     isBooked: {
       type: Boolean,
@@ -25,12 +53,16 @@ const availabilitySchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['available', 'booked', 'blocked'],
       default: 'available',
     },
     booking: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Booking',
+      default: null,
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
       default: null,
     },
   },
@@ -45,4 +77,5 @@ availabilitySchema.set('toJSON', {
   },
 });
 
-module.exports = mongoose.model('Availability', availabilitySchema);
+const Availability = mongoose.model('Availability', availabilitySchema);
+module.exports = Availability;

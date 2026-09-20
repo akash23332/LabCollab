@@ -1,18 +1,19 @@
 const express = require('express');
 const {
-  getEquipmentAnalytics,
-  getInstitutionAnalytics,
-  getInstitutionSummary,
+  getDashboardAnalytics,
+  getAnalyticsReports,
+  getDemandInsights,
+  getUtilizationAnalytics,
+  getOverviewAnalytics,
 } = require('../controllers/analyticsController');
-const { protect } = require('../middleware/authMiddleware');
+const optionalAuth = require('../src/middleware/optionalAuth');
 
 const router = express.Router();
 
-// Dashboard aggregate first (one round trip for the manager dashboard)
-router.get('/institution/:institutionId/summary', protect, getInstitutionSummary);
-router.get('/institution/:institutionId', protect, getInstitutionAnalytics);
-
-// Equipment utilization
-router.get('/equipment/:equipmentId', protect, getEquipmentAnalytics);
+router.get('/dashboard', optionalAuth, getDashboardAnalytics);
+router.get('/reports', optionalAuth, getAnalyticsReports);
+router.get('/demand-insights', optionalAuth, getDemandInsights);
+router.get('/utilization', optionalAuth, getUtilizationAnalytics);
+router.get('/overview', optionalAuth, getOverviewAnalytics);
 
 module.exports = router;
