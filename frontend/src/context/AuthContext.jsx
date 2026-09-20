@@ -34,6 +34,35 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
+  // Synchronize live user role and profile from database
+  useEffect(() => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) return;
+
+    fetch(`${API_BASE_URL}/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.user) {
+          setUser((prev) => {
+            const updated = {
+              ...(prev || {}),
+              ...data.user,
+              token,
+              id: data.user.id || data.user._id,
+              role: data.user.role,
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+            return updated;
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   /**
    * Log in user via backend API (/api/auth/login)
    */

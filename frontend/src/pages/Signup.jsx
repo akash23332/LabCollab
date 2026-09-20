@@ -110,27 +110,63 @@ export default function Signup() {
             />
           </label>
 
-          <label>
-            Account Type
-            <select
-              value={form.role}
-              onChange={(e) => set('role', e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.65rem 0.85rem',
-                borderRadius: '8px',
-                border: '1px solid #dcd5c9',
-                backgroundColor: '#fff',
-                fontSize: '0.9rem',
-                color: '#241b16',
-                outline: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              <option value="student">Student / Researcher</option>
-              <option value="admin">Lab Administrator / Admin</option>
-            </select>
-          </label>
+          <div style={{ marginBottom: '1.25rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6b5e52', display: 'block', marginBottom: '0.45rem' }}>
+              Account Type
+            </span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.65rem' }}>
+              <button
+                type="button"
+                onClick={() => set('role', 'student')}
+                style={{
+                  padding: '0.75rem 0.5rem',
+                  borderRadius: '12px',
+                  border: form.role === 'student' ? '2px solid #c58a48' : '1px solid #dcd5c9',
+                  backgroundColor: form.role === 'student' ? '#fcf7f0' : '#ffffff',
+                  color: form.role === 'student' ? '#784614' : '#6b5e52',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  transition: 'all 0.15s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                }}
+              >
+                <span style={{ fontSize: '1.1rem' }}>🎓</span>
+                <span style={{ fontWeight: 700, fontSize: '0.82rem' }}>Student / User</span>
+                <span style={{ fontSize: '0.7rem', opacity: 0.75 }}>Book instruments & sessions</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => set('role', 'admin')}
+                style={{
+                  padding: '0.75rem 0.5rem',
+                  borderRadius: '12px',
+                  border: form.role === 'admin' ? '2px solid #241b16' : '1px solid #dcd5c9',
+                  backgroundColor: form.role === 'admin' ? '#241b16' : '#ffffff',
+                  color: form.role === 'admin' ? '#ffffff' : '#6b5e52',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  transition: 'all 0.15s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                }}
+              >
+                <span style={{ fontSize: '1.1rem' }}>⚙️</span>
+                <span style={{ fontWeight: 700, fontSize: '0.82rem' }}>Lab Admin</span>
+                <span style={{ fontSize: '0.7rem', opacity: form.role === 'admin' ? 0.85 : 0.75 }}>Manage lab, requests & catalog</span>
+              </button>
+            </div>
+            {form.role === 'admin' && (
+              <p style={{ fontSize: '0.74rem', color: '#965d25', marginTop: '0.45rem', margin: '0.45rem 0 0' }}>
+                ✓ Admin accounts receive full access to the Admin Portal (approvals, schedules, equipment management).
+              </p>
+            )}
+          </div>
 
           <label>
             University Email

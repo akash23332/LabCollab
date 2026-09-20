@@ -53,9 +53,11 @@ app.use(express.json());
 // Rate Limiting (skipped in test environment unless x-test-rate-limit header is sent)
 const isTest = process.env.NODE_ENV === 'test';
 
+const isDevOrTest = isTest || process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isTest ? 1000 : 100,
+  max: isDevOrTest ? 2000 : 100,
   message: { success: false, message: 'Too many requests from this IP, please try again after 15 minutes' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -64,7 +66,7 @@ const generalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isTest ? 1000 : 20,
+  max: isDevOrTest ? 1000 : 20,
   message: { success: false, message: 'Too many authentication attempts, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -73,7 +75,7 @@ const authLimiter = rateLimit({
 
 const paymentLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isTest ? 1000 : 30,
+  max: isDevOrTest ? 1000 : 30,
   message: { success: false, message: 'Too many payment requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
