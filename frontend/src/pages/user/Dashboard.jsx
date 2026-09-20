@@ -202,6 +202,7 @@ export default function UserDashboard() {
       ]
     }
 
+    return []
   }, [upcomingBookings, isDemoUser])
 
   return (
@@ -388,23 +389,29 @@ export default function UserDashboard() {
             </div>
 
             <div className="rounded-2xl border border-[#EAE1D3] bg-white divide-y divide-stone-100 shadow-xs">
-              {trailActivities.map((act) => {
-                const Icon = act.icon
-                return (
-                  <div key={act.id} className="flex items-center justify-between p-3.5 hover:bg-[#FAF8F5] transition">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-stone-50 border border-stone-200/80">
-                        <Icon className={`h-4 w-4 ${act.iconColor}`} />
+              {trailActivities && trailActivities.length > 0 ? (
+                trailActivities.map((act) => {
+                  const Icon = act.icon
+                  return (
+                    <div key={act.id} className="flex items-center justify-between p-3.5 hover:bg-[#FAF8F5] transition">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-stone-50 border border-stone-200/80">
+                          <Icon className={`h-4 w-4 ${act.iconColor}`} />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-stone-900">{act.title}</p>
+                          <p className="text-[11px] text-stone-500">{act.detail}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs font-bold text-stone-900">{act.title}</p>
-                        <p className="text-[11px] text-stone-500">{act.detail}</p>
-                      </div>
+                      <span className="text-[11px] text-stone-400 font-medium">{act.time}</span>
                     </div>
-                    <span className="text-[11px] text-stone-400 font-medium">{act.time}</span>
-                  </div>
-                )
-              })}
+                  )
+                })
+              ) : (
+                <div className="p-6 text-center text-xs text-stone-400">
+                  No recent research sessions or bookings recorded yet.
+                </div>
+              )}
             </div>
           </div>
 
