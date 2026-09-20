@@ -2,32 +2,10 @@ import { createContext, useContext, useState, useEffect } from 'react';
 
 const AuthContext = createContext(null);
 
-// Temporary demo credentials. Replace with backend authentication before production.
-const DEMO_ADMIN = {
-  email: 'nikhilpalyal6@gmail.com',
-  password: 'Nikhil@123',
-  user: {
-    name: 'Nikhil Palyal',
-    email: 'nikhilpalyal6@gmail.com',
-    role: 'admin',
-    avatar: 'NP',
-  },
-};
-
-const DEMO_STUDENT = {
-  email: 'student@example.com',
-  password: 'Student@123',
-  user: {
-    name: 'Demo Student',
-    email: 'student@example.com',
-    role: 'student',
-    institution: 'Tufts University',
-    avatar: 'DS',
-  },
-};
-
 const STORAGE_KEY = 'labshare_user';
-const REGISTERED_USERS_KEY = 'labshare_registered_users';
+const TOKEN_KEY = 'labshare_token';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -39,7 +17,7 @@ export function AuthProvider({ children }) {
     }
   });
 
-  // Backward compatibility state for teammate's existing landing/dashboard components
+  // Backward compatibility state for existing landing/dashboard components
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [currentView, setCurrentView] = useState('landing');
@@ -47,100 +25,44 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (user) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+      if (user.token) {
+        localStorage.setItem(TOKEN_KEY, user.token);
+      }
     } else {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(TOKEN_KEY);
     }
   }, [user]);
 
+  /**
+   * Log in user via backend API (/api/auth/login)
+   */
   const login = async (email, password) => {
     const cleanEmail = (email || '').trim().toLowerCase();
     const cleanPassword = (password || '').trim();
 
-    // 1. Check fixed Admin credentials
-    if (cleanEmail === DEMO_ADMIN.email.toLowerCase() && cleanPassword === DEMO_ADMIN.password) {
-      const adminUser = DEMO_ADMIN.user;
-      setUser(adminUser);
-      return adminUser;
+    if (!cleanEmail || !cleanPassword) {
+      throw new Error('Please provide both email and password.');
     }
 
-    // 2. Check fixed Student credentials
-    if (cleanEmail === DEMO_STUDENT.email.toLowerCase() && cleanPassword === DEMO_STUDENT.password) {
-      const studentUser = DEMO_STUDENT.user;
-      setUser(studentUser);
-      return studentUser;
-    }
-
-    // 3. Check locally registered demo accounts
-    try {
-      const registered = JSON.parse(localStorage.getItem(REGISTERED_USERS_KEY) || '[]');
-      const found = registered.find(
-        (u) => u.email.toLowerCase() === cleanEmail && u.password === cleanPassword
-      );
-      if (found) {
-        // Do NOT store the password in the active session user object
-        const authenticatedUser = {
-          name: found.name,
-          email: found.email,
-          institution: found.institution || 'Partner University',
-          role: 'student', // All signup accounts are strictly students
-          avatar: found.name
-            .split(' ')
-            .map((n) => n[0])
-            .join('')
-            .slice(0, 2)
-            .toUpperCase(),
-        };
-        setUser(authenticatedUser);
-        return authenticatedUser;
-      }
-    } catch {
-      // ignore parse errors
-    }
-
-    throw new Error('Invalid email or password. Please check your credentials and try again.');
-  };
-
-  const signup = async ({ name, institution, email, password }) => {
-    const cleanEmail = (email || '').trim().toLowerCase();
-    const cleanName = (name || '').trim();
-    const cleanInstitution = (institution || '').trim();
-
-    if (!cleanName || !cleanEmail || !password) {
-      throw new Error('Please fill in all required fields.');
-    }
-
-    // Cannot register demo admin email as student
-    if (cleanEmail === DEMO_ADMIN.email.toLowerCase()) {
-      throw new Error('An account with this email already exists.');
-    }
-
-    let registered = [];
-    try {
-      registered = JSON.parse(localStorage.getItem(REGISTERED_USERS_KEY) || '[]');
-    } catch {
-      registered = [];
-    }
-
-    if (registered.some((u) => u.email.toLowerCase() === cleanEmail)) {
-      throw new Error('An account with this email already exists.');
-    }
-
-    // Save student to local demo store
-    registered.push({
-      name: cleanName,
-      institution: cleanInstitution,
-      email: cleanEmail,
-      password,
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email: cleanEmail, password: cleanPassword }),
     });
-    localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(registered));
 
-    // Active session user object — NEVER contains password
-    const newUser = {
-      name: cleanName,
-      email: cleanEmail,
-      institution: cleanInstitution || 'Partner University',
-      role: 'student', // Signup creates ONLY a normal student/user
-      avatar: cleanName
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || 'Invalid email or password. Please try again.');
+    }
+
+    const authenticatedUser = {
+      ...data.user,
+      token: data.token,
+      avatar: (data.user?.name || 'User')
         .split(' ')
         .map((n) => n[0])
         .join('')
@@ -148,13 +70,74 @@ export function AuthProvider({ children }) {
         .toUpperCase(),
     };
 
+    localStorage.setItem(TOKEN_KEY, data.token);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(authenticatedUser));
+    setUser(authenticatedUser);
+
+    return authenticatedUser;
+  };
+
+  /**
+   * Register new user via backend API (/api/auth/register)
+   */
+  const signup = async ({ name, institution, email, password, role = 'student', phone }) => {
+    const cleanName = (name || '').trim();
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanInstitution = (institution || '').trim();
+    const cleanPassword = (password || '').trim();
+
+    if (!cleanName || !cleanEmail || !cleanPassword) {
+      throw new Error('Please fill in all required fields.');
+    }
+
+    const payload = {
+      name: cleanName,
+      email: cleanEmail,
+      password: cleanPassword,
+      institution: cleanInstitution,
+      role: role || 'student',
+    };
+
+    if (phone && phone.trim()) {
+      payload.phone = phone.trim();
+    }
+
+    const res = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || 'Registration failed. Please try again.');
+    }
+
+    const newUser = {
+      ...data.user,
+      token: data.token,
+      avatar: (data.user?.name || cleanName)
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase(),
+    };
+
+    localStorage.setItem(TOKEN_KEY, data.token);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
     setUser(newUser);
+
     return newUser;
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(TOKEN_KEY);
     setCurrentView('landing');
   };
 
@@ -168,10 +151,11 @@ export function AuthProvider({ children }) {
         isAuthenticated: !!user,
         user,
         role: user?.role || null,
+        token: user?.token || localStorage.getItem(TOKEN_KEY),
         login,
         signup,
+        register: signup, // alias
         logout,
-        // Backward compatibility
         activeTab,
         setActiveTab,
         isLoginModalOpen,

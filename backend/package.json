@@ -2,13 +2,34 @@
   "name": "labcollab-backend",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
+  "description": "LabShare backend - Phase 1 (auth/users) + Phase 2 (institutions/equipment/availability) + Phase 3 (bookings) + Phase 4 (AI recommendations) + Phase 5 (lab network) + Phase 6 (QR usage logs & analytics) + Phase 7 (payments & hardening)",
+  "main": "server.js",
   "scripts": {
-    "dev": "node --watch src/server.js",
-    "start": "node src/server.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node tests/phase1.test.js && node tests/phase2.test.js && node tests/phase3.test.js && node tests/phase4.test.js && node tests/phase5.test.js && node tests/phase6.test.js && node tests/phase7.test.js",
+    "test:phase1": "node tests/phase1.test.js",
+    "test:phase2": "node tests/phase2.test.js",
+    "test:phase3": "node tests/phase3.test.js",
+    "test:phase4": "node tests/phase4.test.js",
+    "test:phase5": "node tests/phase5.test.js",
+    "test:phase6": "node tests/phase6.test.js",
+    "test:phase7": "node tests/phase7.test.js",
+    "seed": "node src/seed/seedData.js"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "express": "^5.1.0",
-    "mongoose": "^8.18.0"
+    "express-rate-limit": "^8.7.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.0",
+    "razorpay": "^2.9.8"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^10.1.4",
+    "supertest": "^7.2.2"
   }
 }
