@@ -160,7 +160,7 @@ export default function UserDashboard() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => setShowCheckinModal(true)}
+            onClick={() => setActiveTab('checkin')}
             className="inline-flex items-center gap-2 rounded-xl border border-[#E5DAC6] bg-white px-4 py-2.5 text-xs font-semibold text-stone-700 shadow-xs hover:border-[#C58A48] hover:bg-[#FAF8F5] transition active:scale-95"
           >
             <QrCode className="h-4 w-4 text-stone-600" />
@@ -358,7 +358,7 @@ export default function UserDashboard() {
 
               <button
                 type="button"
-                onClick={() => setShowCheckinModal(true)}
+                onClick={() => setActiveTab('checkin')}
                 className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-[#E5DAC6] bg-white px-4 py-2.5 text-xs font-bold text-stone-800 shadow-xs hover:border-[#C58A48] hover:bg-[#FAF8F5] transition active:scale-95"
               >
                 <QrCode className="h-4 w-4 text-[#C58A48]" />
