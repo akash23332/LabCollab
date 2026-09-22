@@ -1,16 +1,44 @@
-# React + Vite
+# 🔬 LabCollab
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Intelligent Laboratory Equipment Discovery, Booking & Predictive Management Platform
 
-Currently, two official plugins are available:
+> **Discover. Schedule. Collaborate. Predict.**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+LabCollab is a full-stack laboratory management platform designed to make laboratory equipment easier to **discover, access, schedule, and manage** across institutions.
 
-## React Compiler
+The platform combines a modern web application with AI-powered capabilities for **semantic equipment search, demand prediction, and equipment failure-risk prediction**.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## 🌟 What is LabCollab?
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Laboratories often contain expensive and specialized equipment, but finding and using that equipment can be difficult.
+
+Researchers may need to answer questions such as:
+
+- What equipment is available?
+- Where is the equipment located?
+- What can the equipment be used for?
+- Is it currently available?
+- Can I book it?
+- What is the current demand for it?
+- Is the equipment likely to require maintenance?
+
+LabCollab brings these workflows together into one platform.
+
+```text
+                    LABCOLLAB
+                        │
+        ┌───────────────┼────────────────┐
+        │               │                │
+        ▼               ▼                ▼
+    DISCOVER          BOOK             MANAGE
+        │               │                │
+        └───────────────┼────────────────┘
+                        │
+                        ▼
+                   AI INSIGHTS
+                        │
+             ┌──────────┴──────────┐
+             ▼                     ▼
+       Demand Prediction     Failure Prediction
