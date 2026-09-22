@@ -113,9 +113,18 @@ const addDaysISO = (iso, n) => {
    STATUS BADGE
    ============================================================ */
 
+const normalizeStatus = (status) => {
+  const s = String(status || '').toLowerCase().trim();
+  if (s === 'approved' || s === 'confirmed') return 'Approved';
+  if (s === 'rejected' || s === 'declined') return 'Rejected';
+  if (s === 'cancelled' || s === 'canceled') return 'Cancelled';
+  return 'Pending';
+};
+
 function BookingStatusBadge({ status }) {
-  const cls = { Pending: 'pending', Approved: 'approved', Rejected: 'rejected' }[status] || 'pending';
-  return <span className={`admin-status-badge br-${cls}`}>{status}</span>;
+  const norm = normalizeStatus(status);
+  const cls = { Pending: 'pending', Approved: 'approved', Rejected: 'rejected', Cancelled: 'rejected' }[norm] || 'pending';
+  return <span className={`admin-status-badge br-${cls}`}>{norm}</span>;
 }
 
 /* ============================================================
@@ -159,7 +168,7 @@ export default function BookingRequests() {
             endTime: b.endTime,
             purpose: b.purpose,
             requestedAt: b.requestedAt || b.createdAt,
-            status: b.status,
+            status: normalizeStatus(b.status),
             rejectionReason: b.rejectionReason || '',
             approvedBy: b.approvedBy || '',
             approvedAt: b.approvedAt || '',
@@ -189,7 +198,7 @@ export default function BookingRequests() {
           .toLowerCase();
         if (!haystack.includes(q)) return false;
       }
-      if (statusFilter && r.status !== statusFilter) return false;
+      if (statusFilter && (r.status || '').toLowerCase() !== statusFilter.toLowerCase()) return false;
       if (equipmentFilter && r.equipment?.name !== equipmentFilter) return false;
       if (dateFilter === 'today' && r.date !== TODAY) return false;
       if (dateFilter === 'tomorrow' && r.date !== addDaysISO(TODAY, 1)) return false;
@@ -202,9 +211,9 @@ export default function BookingRequests() {
 
   const counts = useMemo(
     () => ({
-      pending: requests.filter((r) => r.status === 'Pending').length,
-      approvedToday: requests.filter((r) => r.status === 'Approved' && r.approvedAt?.startsWith(TODAY)).length,
-      rejectedToday: requests.filter((r) => r.status === 'Rejected' && r.date >= addDaysISO(TODAY, -1)).length,
+      pending: requests.filter((r) => (r.status || '').toLowerCase() === 'pending').length,
+      approvedToday: requests.filter((r) => (r.status || '').toLowerCase() === 'approved' && r.approvedAt?.startsWith(TODAY)).length,
+      rejectedToday: requests.filter((r) => (r.status || '').toLowerCase() === 'rejected' && r.date >= addDaysISO(TODAY, -1)).length,
       total: requests.length,
     }),
     [requests]
@@ -273,38 +282,41 @@ export default function BookingRequests() {
 
   const hasActiveFilters = search || statusFilter || equipmentFilter || dateFilter;
 
-  const renderActions = (r) => (
-    <div className="br-actions">
-      <button
-        className="admin-action-btn"
-        onClick={() => setViewRequest(r)}
-        aria-label={`View ${r.id}`}
-        title="View details"
-      >
-        <Eye size={16} />
-      </button>
-      {r.status === 'Pending' && (
-        <>
-          <button
-            className="admin-action-btn approve"
-            onClick={() => setApproveTarget(r)}
-            aria-label={`Approve ${r.id}`}
-            title="Approve"
-          >
-            <Check size={16} />
-          </button>
-          <button
-            className="admin-action-btn reject"
-            onClick={() => openRejectModal(r)}
-            aria-label={`Reject ${r.id}`}
-            title="Reject"
-          >
-            <X size={16} />
-          </button>
-        </>
-      )}
-    </div>
-  );
+  const renderActions = (r) => {
+    const isPending = (r.status || '').toLowerCase() === 'pending';
+    return (
+      <div className="br-actions">
+        <button
+          className="admin-action-btn"
+          onClick={() => setViewRequest(r)}
+          aria-label={`View ${r.id}`}
+          title="View details"
+        >
+          <Eye size={16} />
+        </button>
+        {isPending && (
+          <>
+            <button
+              className="admin-action-btn approve"
+              onClick={() => setApproveTarget(r)}
+              aria-label={`Approve ${r.id}`}
+              title="Approve"
+            >
+              <Check size={16} />
+            </button>
+            <button
+              className="admin-action-btn reject"
+              onClick={() => openRejectModal(r)}
+              aria-label={`Reject ${r.id}`}
+              title="Reject"
+            >
+              <X size={16} />
+            </button>
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="admin-booking-page">
@@ -569,7 +581,7 @@ export default function BookingRequests() {
               <button className="admin-btn admin-btn-secondary" onClick={() => setViewRequest(null)}>
                 Close
               </button>
-              {viewRequest.status === 'Pending' && (
+              {(viewRequest.status || '').toLowerCase() === 'pending' && (
                 <>
                   <button
                     className="admin-btn admin-btn-danger"

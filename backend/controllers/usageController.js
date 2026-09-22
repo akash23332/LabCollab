@@ -1,7 +1,7 @@
 const UsageLog = require('../models/UsageLog');
 const Equipment = require('../src/models/Equipment');
 const Booking = require('../models/Booking');
-const { isValidObjectId } = require('../src/utils/apiHelpers');
+const { isValidObjectId, isDemoAdmin, escapeRegex } = require('../src/utils/apiHelpers');
 
 /**
  * @desc    Get all usage logs with filtering
@@ -41,6 +41,56 @@ const getUsageLogs = async (req, res, next) => {
 
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 50;
+
+    if (req.user && req.user.role === 'admin' && !isDemoAdmin(req.user)) {
+      const adminEquipment = await Equipment.find({
+        $or: [
+          { createdBy: req.user._id },
+          ...(req.user.institution
+            ? [
+                {
+                  $and: [
+                    {
+                      $or: [
+                        { institution: new RegExp(`^${escapeRegex(req.user.institution)}$`, 'i') },
+                        { collegeName: new RegExp(`^${escapeRegex(req.user.institution)}$`, 'i') },
+                      ],
+                    },
+                    { createdBy: { $ne: null } },
+                  ],
+                },
+              ]
+            : []),
+        ],
+      }).select('_id equipmentId');
+
+      const eqIds = adminEquipment.map((e) => e._id);
+      const eqStringIds = adminEquipment.map((e) => e.equipmentId).filter(Boolean);
+
+      const adminFilters = [];
+      if (eqIds.length > 0) adminFilters.push({ equipment: { $in: eqIds } });
+      if (eqStringIds.length > 0) adminFilters.push({ equipmentId: { $in: eqStringIds } });
+
+      if (adminFilters.length > 0) {
+        if (query.$or) {
+          query.$and = (query.$and || []).concat([{ $or: query.$or }, { $or: adminFilters }]);
+          delete query.$or;
+        } else {
+          query.$or = adminFilters;
+        }
+      } else {
+        return res.json({
+          success: true,
+          total: 0,
+          count: 0,
+          page: pageNum,
+          totalPages: 0,
+          data: [],
+          logs: [],
+        });
+      }
+    }
+
     const skip = (pageNum - 1) * limitNum;
 
     const [logs, total] = await Promise.all([

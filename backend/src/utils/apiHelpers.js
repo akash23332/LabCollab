@@ -79,6 +79,18 @@ const canManage = (user, doc, extraOwnerIds = []) => {
   return owners.includes(String(user._id));
 };
 
+const DEMO_ADMIN_EMAILS = [
+  'nikhilpalyal6@gmail.com',
+  'akak9781189@gmail.com',
+  'demo@labcollab.com',
+];
+
+const isDemoAdmin = (user) => {
+  if (!user || !user.email) return false;
+  const email = String(user.email).toLowerCase().trim();
+  return DEMO_ADMIN_EMAILS.includes(email) || email.endsWith('@demo.com');
+};
+
 module.exports = {
   httpError,
   escapeRegex,
@@ -93,4 +105,6 @@ module.exports = {
   parseLimit,
   parsePage,
   canManage,
+  isDemoAdmin,
 };
+

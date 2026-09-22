@@ -47,7 +47,7 @@ export default function Equipment() {
   const fetchEquipment = async () => {
     try {
       setIsLoading(true);
-      const res = await equipmentService.getEquipment({ limit: 200 });
+      const res = await equipmentService.getEquipment({ limit: 200, manage: true });
       if (res.success && Array.isArray(res.data)) {
         setEquipmentData(res.data);
       }

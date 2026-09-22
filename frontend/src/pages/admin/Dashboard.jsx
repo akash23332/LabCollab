@@ -96,7 +96,11 @@ export default function Dashboard() {
             date: b.date,
             startTime: b.startTime,
             endTime: b.endTime,
-            status: b.status,
+            status: (b.status || 'pending').toLowerCase() === 'approved'
+              ? 'Approved'
+              : (b.status || 'pending').toLowerCase() === 'rejected'
+              ? 'Rejected'
+              : 'Pending',
             purpose: b.purpose,
             createdAt: b.requestedAt || b.createdAt,
           }));
@@ -141,7 +145,7 @@ export default function Dashboard() {
   };
 
   const pendingCount = useMemo(() => {
-    return requests.filter((r) => r.status === 'Pending').length;
+    return requests.filter((r) => (r.status || '').toLowerCase() === 'pending').length;
   }, [requests]);
 
   const stats = useMemo(
@@ -250,8 +254,8 @@ export default function Dashboard() {
             ) : (
               <div className="admin-booking-request-list">
                 {requests.slice(0, 6).map((request) => {
-                  const isPending = request.status === 'Pending';
-                  const isApproved = request.status === 'Approved';
+                  const isPending = (request.status || '').toLowerCase() === 'pending';
+                  const isApproved = (request.status || '').toLowerCase() === 'approved';
 
                   return (
                     <div key={request.id} className="admin-booking-request-item">

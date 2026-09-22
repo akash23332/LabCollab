@@ -115,6 +115,10 @@ const bookingSchema = new mongoose.Schema(
       enum: ['unpaid', 'pending', 'paid', 'refunded'],
       default: 'unpaid',
     },
+    isHistorical: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

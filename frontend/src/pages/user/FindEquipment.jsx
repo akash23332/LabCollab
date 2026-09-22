@@ -27,7 +27,8 @@ import {
   Star,
   Layers,
   Flame,
-  Check
+  Check,
+  AlertCircle
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import Button from '../../components/ui/Button'
@@ -531,6 +532,8 @@ export default function FindEquipment() {
   const [activeModalInstrument, setActiveModalInstrument] = useState(null)
   const [selectedSlot, setSelectedSlot] = useState(null)
   const [bookingConfirmed, setBookingConfirmed] = useState(false)
+  const [bookingError, setBookingError] = useState('')
+  const [isBookingSubmitting, setIsBookingSubmitting] = useState(false)
   
   // AI Intent Search Modal
   const [showIntentSearchModal, setShowIntentSearchModal] = useState(false)
@@ -896,6 +899,18 @@ export default function FindEquipment() {
                             <span className={`h-1.5 w-1.5 rounded-full ${instrument.dotClass}`} />
                             {instrument.availability}
                           </span>
+                          {instrument.demandPrediction?.demandLevel && (
+                            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-extrabold ${
+                              String(instrument.demandPrediction.demandLevel).toUpperCase() === 'HIGH'
+                                ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                : String(instrument.demandPrediction.demandLevel).toUpperCase() === 'MEDIUM'
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            }`}>
+                              <Sparkles className="h-2.5 w-2.5 text-amber-500" />
+                              <span>{String(instrument.demandPrediction.demandLevel).toUpperCase()} DEMAND</span>
+                            </span>
+                          )}
                           <span className="text-xs font-bold text-amber-700">★ {instrument.rating}</span>
                         </div>
                         <h3 className="text-base font-bold text-stone-900 mt-1">{instrument.title}</h3>
@@ -938,12 +953,24 @@ export default function FindEquipment() {
                     <div className="relative">
                       <InstrumentVisual type={instrument.visualType} />
                       
-                      {/* Top-Left Availability Badge */}
-                      <div className="absolute top-3 left-3 z-20">
+                      {/* Top-Left Availability and AI Demand Badges */}
+                      <div className="absolute top-3 left-3 z-20 flex flex-col gap-1.5 items-start">
                         <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold backdrop-blur-md shadow-xs ${instrument.badgeClass}`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${instrument.dotClass}`} />
                           {instrument.availability}
                         </span>
+                        {instrument.demandPrediction?.demandLevel && (
+                          <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-extrabold backdrop-blur-md shadow-xs ${
+                            String(instrument.demandPrediction.demandLevel).toUpperCase() === 'HIGH'
+                              ? 'bg-rose-900/90 text-rose-100 border-rose-600'
+                              : String(instrument.demandPrediction.demandLevel).toUpperCase() === 'MEDIUM'
+                              ? 'bg-amber-800/90 text-amber-100 border-amber-600'
+                              : 'bg-emerald-800/90 text-emerald-100 border-emerald-600'
+                          }`}>
+                            <Sparkles className="h-2.5 w-2.5 text-yellow-300" />
+                            <span>{String(instrument.demandPrediction.demandLevel).toUpperCase()} DEMAND</span>
+                          </span>
+                        )}
                       </div>
 
                       {/* Top-Right Wishlist Heart Button */}
@@ -1050,10 +1077,27 @@ export default function FindEquipment() {
             {/* Modal Header */}
             <div className="flex items-start justify-between gap-4 border-b border-stone-100 pb-4">
               <div>
-                <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${activeModalInstrument.badgeClass}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${activeModalInstrument.dotClass}`} />
-                  {activeModalInstrument.availability}
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold ${activeModalInstrument.badgeClass}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${activeModalInstrument.dotClass}`} />
+                    {activeModalInstrument.availability}
+                  </span>
+                  {activeModalInstrument.demandPrediction?.demandLevel && (
+                    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-extrabold ${
+                      String(activeModalInstrument.demandPrediction.demandLevel).toUpperCase() === 'HIGH'
+                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                        : String(activeModalInstrument.demandPrediction.demandLevel).toUpperCase() === 'MEDIUM'
+                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    }`}>
+                      <Sparkles className="h-3 w-3 text-amber-500" />
+                      <span>AI Demand: {String(activeModalInstrument.demandPrediction.demandLevel).toUpperCase()}</span>
+                      {activeModalInstrument.demandPrediction?.predictedBookings ? (
+                        <span className="opacity-75 font-normal">({activeModalInstrument.demandPrediction.predictedBookings} req/wk)</span>
+                      ) : null}
+                    </span>
+                  )}
+                </div>
                 <h3 className="text-xl font-bold text-stone-900 mt-2">{activeModalInstrument.title}</h3>
                 <p className="text-xs text-stone-500 flex items-center gap-1 mt-1">
                   <Building2 className="h-3.5 w-3.5 text-[#C58A48]" />
@@ -1069,6 +1113,7 @@ export default function FindEquipment() {
                   setActiveModalInstrument(null)
                   setBookingConfirmed(false)
                   setSelectedSlot(null)
+                  setBookingError('')
                 }}
                 className="rounded-xl border border-stone-200 p-2 text-stone-400 hover:bg-stone-50 hover:text-stone-700"
               >
@@ -1114,7 +1159,10 @@ export default function FindEquipment() {
                     <button
                       key={slot}
                       type="button"
-                      onClick={() => setSelectedSlot(slot)}
+                      onClick={() => {
+                        setSelectedSlot(slot)
+                        setBookingError('')
+                      }}
                       className={`p-3 rounded-2xl border text-center transition ${
                         selectedSlot === slot 
                           ? 'border-[#C58A48] bg-[#FCF7F0] text-[#965D25] ring-2 ring-[#C58A48] font-bold shadow-xs' 
@@ -1127,18 +1175,40 @@ export default function FindEquipment() {
                   ))}
                 </div>
 
+                {/* Booking Error Banner */}
+                {bookingError && (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50/90 p-3.5 text-xs text-rose-800 flex items-start gap-2.5 animate-fadeIn">
+                    <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                    <div className="space-y-0.5 flex-1">
+                      <p className="font-bold text-rose-900">
+                        {bookingError.toLowerCase().includes('conflict') ||
+                        bookingError.toLowerCase().includes('already booked') ||
+                        bookingError.toLowerCase().includes('active booking')
+                          ? 'Booking Conflict Detected'
+                          : 'Booking Request Notice'}
+                      </p>
+                      <p className="text-rose-700 leading-snug">{bookingError}</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="pt-4 flex gap-3">
                   <button
                     type="button"
-                    onClick={() => setActiveModalInstrument(null)}
+                    onClick={() => {
+                      setActiveModalInstrument(null)
+                      setBookingError('')
+                    }}
                     className="flex-1 rounded-xl border border-stone-200 py-3 text-xs font-semibold text-stone-600 hover:bg-stone-50"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
-                    disabled={!selectedSlot}
+                    disabled={!selectedSlot || isBookingSubmitting}
                     onClick={async () => {
+                      setBookingError('')
+                      setIsBookingSubmitting(true)
                       try {
                         await bookingService.createBooking({
                           equipmentId: activeModalInstrument.id,
@@ -1151,18 +1221,20 @@ export default function FindEquipment() {
                           endTime: selectedSlot ? selectedSlot.split(' - ')[1] : '12:00',
                           purpose: 'Research experiment session booked via Find Equipment portal',
                         })
+                        setBookingConfirmed(true)
                       } catch (err) {
-                        console.warn('Booking persisted with fallback:', err.message)
+                        setBookingError(err.message || 'Unable to complete reservation for this slot. Please choose another slot.')
+                      } finally {
+                        setIsBookingSubmitting(false)
                       }
-                      setBookingConfirmed(true)
                     }}
                     className={`flex-1 rounded-xl py-3 text-xs font-bold text-white transition ${
-                      selectedSlot 
+                      selectedSlot && !isBookingSubmitting
                         ? 'bg-[#C58A48] hover:bg-[#B37636] shadow-md shadow-[#C58A48]/20 cursor-pointer' 
                         : 'bg-stone-300 cursor-not-allowed'
                     }`}
                   >
-                    Confirm & Reserve Slot
+                    {isBookingSubmitting ? 'Checking Availability...' : 'Confirm & Reserve Slot'}
                   </button>
                 </div>
               </div>

@@ -17,8 +17,43 @@ export function AuthProvider({ children }) {
     }
   });
 
-  // Backward compatibility state for existing landing/dashboard components
-  const [activeTab, setActiveTab] = useState('overview');
+  // Backward compatibility state for existing landing/dashboard components with URL history sync
+  const [activeTab, _setActiveTab] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('tab') || 'overview';
+    } catch {
+      return 'overview';
+    }
+  });
+
+  const setActiveTab = (tab) => {
+    _setActiveTab(tab);
+    try {
+      if (window.location.pathname.startsWith('/dashboard')) {
+        const currentUrl = new URL(window.location.href);
+        if (currentUrl.searchParams.get('tab') !== tab) {
+          currentUrl.searchParams.set('tab', tab);
+          window.history.pushState({ tab }, '', currentUrl.toString());
+        }
+      }
+    } catch (e) {
+      // Ignore URL manipulation errors
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab') || 'overview';
+        _setActiveTab(tab);
+      } catch (e) {}
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [currentView, setCurrentView] = useState('landing');
 

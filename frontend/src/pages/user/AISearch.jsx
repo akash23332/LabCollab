@@ -16,7 +16,8 @@ import {
   X, 
   CheckCircle2, 
   FlaskConical,
-  Lightbulb
+  Lightbulb,
+  AlertCircle
 } from 'lucide-react'
 import equipmentService from '../../services/equipmentService'
 import bookingService from '../../services/bookingService'
@@ -125,6 +126,8 @@ export default function AISearch() {
   const [selectedInstrument, setSelectedInstrument] = useState(null)
   const [selectedSlot, setSelectedSlot] = useState('')
   const [bookingSuccess, setBookingSuccess] = useState(false)
+  const [bookingError, setBookingError] = useState('')
+  const [isBookingSubmitting, setIsBookingSubmitting] = useState(false)
   const [activeFilterModal, setActiveFilterModal] = useState(null)
   const [filterValues, setFilterValues] = useState({
     method: 'Transient response testing',
@@ -210,28 +213,31 @@ export default function AISearch() {
   }
 
   const handleBook = async () => {
-    if (selectedInstrument && selectedSlot) {
-      try {
-        await bookingService.createBooking({
-          equipmentId: selectedInstrument.id,
-          equipmentName: selectedInstrument.name,
-          equipmentCategory: selectedInstrument.category,
-          college: selectedInstrument.institution,
-          lab: selectedInstrument.location,
-          date: new Date().toISOString().split('T')[0],
-          startTime: selectedSlot.split('–')[0]?.trim() || '14:00',
-          endTime: selectedSlot.split('–')[1]?.trim() || '16:00',
-          purpose: `Booked via AI Search: ${prompt.slice(0, 100)}`,
-        })
-      } catch (err) {
-        console.warn('Booking created locally fallback:', err.message)
-      }
+    if (!selectedInstrument || !selectedSlot) return
+    setBookingError('')
+    setIsBookingSubmitting(true)
+    try {
+      await bookingService.createBooking({
+        equipmentId: selectedInstrument.id,
+        equipmentName: selectedInstrument.name,
+        equipmentCategory: selectedInstrument.category,
+        college: selectedInstrument.institution,
+        lab: selectedInstrument.location,
+        date: new Date().toISOString().split('T')[0],
+        startTime: selectedSlot.split('–')[0]?.trim() || '14:00',
+        endTime: selectedSlot.split('–')[1]?.trim() || '16:00',
+        purpose: `Booked via AI Search: ${prompt.slice(0, 100)}`,
+      })
+      setBookingSuccess(true)
+      setTimeout(() => {
+        setBookingSuccess(false)
+        setSelectedInstrument(null)
+      }, 1800)
+    } catch (err) {
+      setBookingError(err.message || 'Unable to reserve this slot due to a scheduling conflict.')
+    } finally {
+      setIsBookingSubmitting(false)
     }
-    setBookingSuccess(true)
-    setTimeout(() => {
-      setBookingSuccess(false)
-      setSelectedInstrument(null)
-    }, 1800)
   }
 
   return (
@@ -732,7 +738,10 @@ export default function AISearch() {
                   <button
                     key={slot}
                     type="button"
-                    onClick={() => setSelectedSlot(slot)}
+                    onClick={() => {
+                      setSelectedSlot(slot)
+                      setBookingError('')
+                    }}
                     className={`w-full text-left px-4 py-3 rounded-xl text-xs font-bold border transition flex items-center justify-between ${
                       selectedSlot === slot
                         ? 'bg-[#F7ECD9] border-[#C58A48] text-[#965D25]'
@@ -748,11 +757,31 @@ export default function AISearch() {
               </div>
             </div>
 
+            {/* Error Notification */}
+            {bookingError && (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-800 flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div className="space-y-0.5 flex-1">
+                  <p className="font-bold text-rose-900">
+                    {bookingError.toLowerCase().includes('conflict') ||
+                    bookingError.toLowerCase().includes('already booked') ||
+                    bookingError.toLowerCase().includes('active booking')
+                      ? 'Booking Conflict Detected'
+                      : 'Booking Request Notice'}
+                  </p>
+                  <p className="text-rose-700">{bookingError}</p>
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="pt-2 flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setSelectedInstrument(null)}
+                onClick={() => {
+                  setSelectedInstrument(null)
+                  setBookingError('')
+                }}
                 className="flex-1 py-3 rounded-xl border border-[#EDE8E0] text-xs font-bold text-[#6B5E52] hover:bg-[#FAF8F5]"
               >
                 Cancel
@@ -760,8 +789,12 @@ export default function AISearch() {
               <button
                 type="button"
                 onClick={handleBook}
-                disabled={bookingSuccess}
-                className="flex-2 py-3 rounded-xl bg-[#241B16] hover:bg-[#C58A48] text-white text-xs font-bold transition flex items-center justify-center gap-2"
+                disabled={bookingSuccess || isBookingSubmitting || !selectedSlot}
+                className={`flex-2 py-3 rounded-xl text-white text-xs font-bold transition flex items-center justify-center gap-2 ${
+                  selectedSlot && !isBookingSubmitting
+                    ? 'bg-[#241B16] hover:bg-[#C58A48] cursor-pointer'
+                    : 'bg-stone-300 cursor-not-allowed'
+                }`}
               >
                 {bookingSuccess ? (
                   <>

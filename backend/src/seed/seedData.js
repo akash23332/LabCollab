@@ -854,7 +854,79 @@ const seedDatabase = async () => {
       },
     ];
     await Booking.insertMany(bookingsData);
-    console.log(`${bookingsData.length} Bookings seeded.`);
+    console.log(`${bookingsData.length} Recent Bookings seeded.`);
+
+    // 5b. Seed Synthetic Historical Bookings for AI Demand Prediction
+    console.log('Generating synthetic historical bookings for AI Demand Prediction...');
+    const historicalBookings = [];
+    const historicalPurposes = [
+      'Material surface characterization',
+      'Spectroscopy data collection',
+      'Nano-particle sizing session',
+      'Structural diffraction analysis',
+      'Composite material stress testing',
+      'Thin film deposition measurement',
+      'Polymer crystallization experiment',
+      'Biological sample imaging',
+      'RF signal integrity testing',
+      'Circuit board prototyping',
+    ];
+
+    const nowTime = Date.now();
+    let histCounter = 100;
+
+    for (const eq of insertedEquipment) {
+      const eqTitle = eq.equipmentName || eq.name || '';
+      const isHighDemand = ['Zeiss LSM 980 Confocal Microscope', 'Thermo Scientific SEM (Quattro S)', 'Agilent 8890 GC-MS System', 'Digital Storage Oscilloscope', '3D Printer - Industrial FDM'].some((name) => eqTitle.includes(name));
+      const isMediumDemand = ['Bruker D8 Advance XRD', 'Malvern Zetasizer Ultra', 'Formlabs Form 3+ SLA Printer', 'Bio-Rad T100 Thermal Cycler'].some((name) => eqTitle.includes(name));
+      const bookingCount = isHighDemand ? 14 : isMediumDemand ? 7 : 3;
+
+      for (let k = 0; k < bookingCount; k++) {
+        histCounter++;
+        const daysAgo = Math.floor(Math.random() * 45) + 1;
+        const pastDate = new Date(nowTime - daysAgo * 24 * 3600 * 1000);
+        const dateStr = pastDate.toISOString().split('T')[0];
+        const startH = 9 + (k % 8);
+        const startStr = `${startH.toString().padStart(2, '0')}:00`;
+        const endStr = `${(startH + 2).toString().padStart(2, '0')}:00`;
+
+        historicalBookings.push({
+          bookingId: `HIST-${histCounter}`,
+          equipmentId: eq.equipmentId,
+          equipmentName: eqTitle,
+          equipmentCategory: eq.category,
+          equipment: eq._id,
+          student: {
+            name: `Synthetic Researcher ${histCounter % 8 + 1}`,
+            email: `synthetic.researcher${histCounter % 8 + 1}@synthetic.labcollab.edu`,
+            avatar: `SR`,
+            institution: eq.collegeName || 'Chitkara University',
+          },
+          college: eq.collegeName || 'Chitkara University',
+          lab: eq.labName || 'Central Research Lab',
+          building: eq.building || 'Block A',
+          room: eq.roomNumber || '101',
+          date: dateStr,
+          startTime: startStr,
+          endTime: endStr,
+          duration: 2,
+          purpose: historicalPurposes[histCounter % historicalPurposes.length],
+          status: 'Approved',
+          approvedBy: 'Platform AI System',
+          approvedAt: pastDate,
+          totalPrice: (eq.price || 500) * 2,
+          totalAmount: (eq.price || 500) * 2,
+          paymentStatus: 'paid',
+          isHistorical: true,
+          createdAt: pastDate,
+        });
+      }
+    }
+
+    if (historicalBookings.length > 0) {
+      await Booking.insertMany(historicalBookings);
+      console.log(`Seeded ${historicalBookings.length} synthetic historical bookings into MongoDB.`);
+    }
 
     // 6. Seed Usage Logs
     console.log('Seeding Usage Logs...');

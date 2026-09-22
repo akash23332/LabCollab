@@ -16,6 +16,7 @@ import {
   Check,
   AlertTriangle,
   Loader2,
+  Trash2,
 } from 'lucide-react';
 import StatCard from '../../components/admin/StatCard';
 import equipmentService from '../../services/equipmentService';
@@ -143,15 +144,7 @@ function buildDaySchedule(config, key) {
   return [...segments, ...cuts].sort((a, b) => a.start - b.start);
 }
 
-/* Raw slots (before subtraction) — used for overlap validation */
-function getAllSlotsRaw(config, key) {
-  if (!config) return [];
-  return [
-    ...getBaseTemplate(config, key),
-    ...getExceptionsForDay(config, key),
-    ...(config.bookings || []).filter((b) => b.date === key),
-  ];
-}
+
 
 const sumHours = (slots, statuses) =>
   slots
@@ -178,7 +171,7 @@ export default function Availability() {
   useEffect(() => {
     const fetchEquipment = async () => {
       try {
-        const res = await equipmentService.getEquipment();
+        const res = await equipmentService.getEquipment({ manage: true });
         const items = res.data?.data || res.data || [];
         if (Array.isArray(items) && items.length > 0) {
           setEquipmentList(items);
@@ -247,6 +240,11 @@ export default function Availability() {
 
   const dayBookings = useMemo(
     () => (config?.bookings || []).filter((b) => b.date === selectedDate),
+    [config, selectedDate]
+  );
+
+  const dayExceptions = useMemo(
+    () => getExceptionsForDay(config, selectedDate),
     [config, selectedDate]
   );
 
@@ -319,18 +317,53 @@ export default function Availability() {
       } else if (start < LAB_OPEN || end > LAB_CLOSE) {
         errors.end = `Slot must be within lab hours (${fmt12h(LAB_OPEN)} – ${fmt12h(LAB_CLOSE)})`;
       } else {
-        const overlaps = getAllSlotsRaw(config, form.date).some(
-          (s) => start < s.end && end > s.start
+        const dayExceptions = getExceptionsForDay(config, form.date);
+        const dayBookings = (config?.bookings || []).filter((b) => b.date === form.date);
+
+        // 1. Conflict with existing confirmed/approved student bookings
+        const bookingConflict = dayBookings.find(
+          (b) => start < b.end && end > b.start
         );
-        if (overlaps) {
-          errors.end = 'This slot overlaps an existing availability, block or booking';
+        if (bookingConflict) {
+          errors.end = `This slot overlaps an existing booking (${fmt24h(bookingConflict.start)} – ${fmt24h(bookingConflict.end)})`;
+        } else {
+          // 2. Conflict with existing blocked or maintenance periods
+          const blockConflict = dayExceptions.find(
+            (e) => ['blocked', 'maintenance'].includes(e.status) && start < e.end && end > e.start
+          );
+          if (blockConflict) {
+            if (requireReason) {
+              errors.end = `This slot overlaps an already ${blockConflict.status} period (${fmt24h(blockConflict.start)} – ${fmt24h(blockConflict.end)})`;
+            } else {
+              errors.end = `This slot overlaps a blocked/maintenance period (${fmt24h(blockConflict.start)} – ${fmt24h(blockConflict.end)}). Remove the block first.`;
+            }
+          } else if (!requireReason) {
+            // 3. For Add Availability: check if identical manual availability exception is already added
+            const availConflict = dayExceptions.find(
+              (e) => e.status === 'available' && start < e.end && end > e.start
+            );
+            if (availConflict) {
+              errors.end = `This slot overlaps an already added availability slot (${fmt24h(availConflict.start)} – ${fmt24h(availConflict.end)})`;
+            }
+          }
         }
       }
     }
-    if (requireReason && !form.reason.trim()) {
+    if (requireReason && !form.reason?.trim()) {
       errors.reason = 'Please provide a reason';
     }
     return errors;
+  };
+
+  const handleRemoveException = async (exceptionId) => {
+    if (!exceptionId || !equipmentId) return;
+    try {
+      await availabilityService.removeException(equipmentId, exceptionId);
+      await loadAvailability(equipmentId);
+      setToast({ type: 'success', message: 'Slot exception removed successfully' });
+    } catch (err) {
+      setToast({ type: 'error', message: err.response?.data?.message || 'Failed to remove slot exception' });
+    }
   };
 
   const handleAddAvailability = async (e) => {
@@ -395,13 +428,45 @@ export default function Availability() {
 
   const renderSlotBlock = (slot, compact = false) => {
     const isBooking = slot.status === 'booked';
+    const isCustomException = Boolean(slot.id && !isBooking);
     return (
       <div
         key={slot.id || `slot-${slot.start}-${slot.end}`}
         className={`avail-block ${slot.status} ${compact ? 'compact' : ''}`}
         style={blockPos(slot)}
       >
-        <span className="avail-block-status">{SLOT_LABELS[slot.status]}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <span className="avail-block-status">{SLOT_LABELS[slot.status]}</span>
+          {isCustomException && !compact && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRemoveException(slot.id);
+              }}
+              style={{
+                background: 'rgba(0,0,0,0.15)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '18px',
+                height: '18px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                color: 'currentColor',
+                padding: 0,
+                lineHeight: 1,
+              }}
+              title="Remove this slot"
+              aria-label="Remove this slot"
+            >
+              ✕
+            </button>
+          )}
+        </div>
         <span className="avail-block-time">
           {fmt12h(slot.start)} – {fmt12h(slot.end)}
         </span>
@@ -690,6 +755,59 @@ export default function Availability() {
           </div>
         )}
       </div>
+
+      {/* ---------- Active Day Exceptions / Blocks ---------- */}
+      {dayExceptions.length > 0 && (
+        <div className="admin-card">
+          <div className="admin-card-header">
+            <h3 className="admin-card-title">
+              Active Blocks & Exceptions · {fmtDateShort(parseKey(selectedDate))}
+            </h3>
+            <span className="avail-bookings-count">
+              {dayExceptions.length} exception{dayExceptions.length === 1 ? '' : 's'}
+            </span>
+          </div>
+          <div className="avail-bookings-list">
+            {dayExceptions.map((exc) => (
+              <div key={exc.id || `exc-${exc.start}-${exc.end}`} className="avail-booking-row">
+                <div className="avail-booking-when">
+                  <span className="avail-booking-date">{fmtDateShort(parseKey(selectedDate))}</span>
+                  <span className="avail-booking-time">
+                    {fmt12h(exc.start)} – {fmt12h(exc.end)}
+                  </span>
+                </div>
+                <div className="avail-booking-who">
+                  <div>
+                    <p className="avail-booking-student" style={{ textTransform: 'capitalize' }}>
+                      {exc.status === 'maintenance' ? 'Scheduled Maintenance' : (exc.status === 'blocked' ? 'Blocked Slot' : 'Custom Availability')}
+                    </p>
+                    <p className="avail-booking-inst">
+                      {exc.reason || 'No reason specified'}
+                    </p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span className={`admin-status-badge ${exc.status || 'blocked'}`}>
+                    {exc.status || 'Blocked'}
+                  </span>
+                  {exc.id && (
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn-ghost"
+                      style={{ color: '#b91c1c', padding: '4px 10px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                      onClick={() => handleRemoveException(exc.id)}
+                      title="Remove this slot"
+                    >
+                      <Trash2 size={13} />
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ---------- Bookings list ---------- */}
       <div className="admin-card">

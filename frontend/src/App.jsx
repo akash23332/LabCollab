@@ -104,6 +104,7 @@ export default function App() {
           {/* Public Landing & Auth Routes */}
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/admin/login" element={<Login defaultRole="admin" />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/logout" element={<LogoutHandler />} />
 

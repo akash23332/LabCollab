@@ -126,8 +126,11 @@ export default function CommandCenter() {
     }
   ]
 
-  // Approve / Reject handler
+  const isAdmin = user?.role === 'admin' || user?.role === 'manager' || user?.role === 'faculty'
+
+  // Approve / Reject handler (Admin only)
   const handleApprove = async (id) => {
+    if (!isAdmin) return
     try {
       await bookingService.updateBookingStatus(id, 'Approved')
     } catch (err) {
@@ -139,6 +142,7 @@ export default function CommandCenter() {
   }
 
   const handleReject = async (id) => {
+    if (!isAdmin) return
     try {
       await bookingService.updateBookingStatus(id, 'Rejected')
     } catch (err) {
@@ -146,6 +150,19 @@ export default function CommandCenter() {
     }
     setBookingRequests((prev) =>
       prev.map((req) => (req.id === id ? { ...req, status: 'rejected' } : req))
+    )
+  }
+
+  // Cancel handler (User can cancel their own booking)
+  const handleCancel = async (id) => {
+    if (!window.confirm('Are you sure you want to cancel this booking request?')) return
+    try {
+      await bookingService.updateBookingStatus(id, 'Cancelled')
+    } catch (err) {
+      console.warn('Failed to cancel on backend:', err.message)
+    }
+    setBookingRequests((prev) =>
+      prev.map((req) => (req.id === id ? { ...req, status: 'cancelled' } : req))
     )
   }
 
@@ -451,38 +468,69 @@ export default function CommandCenter() {
                           ● Rejected
                         </span>
                       )}
+                      {req.status === 'cancelled' && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200">
+                          ● Cancelled
+                        </span>
+                      )}
                     </td>
 
                     {/* Actions */}
                     <td className="py-3.5 text-center">
-                      {req.status === 'pending' ? (
-                        <div className="flex items-center justify-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => handleApprove(req.id)}
-                            className="w-7 h-7 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white flex items-center justify-center transition shadow-xs"
-                            title="Approve Request"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleReject(req.id)}
-                            className="w-7 h-7 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 flex items-center justify-center transition"
-                            title="Reject Request"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                      {isAdmin ? (
+                        req.status === 'pending' ? (
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleApprove(req.id)}
+                              className="w-7 h-7 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white flex items-center justify-center transition shadow-xs cursor-pointer"
+                              title="Approve Request"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleReject(req.id)}
+                              className="w-7 h-7 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 flex items-center justify-center transition cursor-pointer"
+                              title="Reject Request"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-1.5 opacity-40">
+                            <div className="w-7 h-7 rounded-lg border border-[#EDE8E0] flex items-center justify-center text-[#8C7B70]">
+                              <Check className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="w-7 h-7 rounded-lg border border-[#EDE8E0] flex items-center justify-center text-[#8C7B70]">
+                              <X className="w-3.5 h-3.5" />
+                            </div>
+                          </div>
+                        )
                       ) : (
-                        <div className="flex items-center justify-center gap-1.5 opacity-40">
-                          <div className="w-7 h-7 rounded-lg border border-[#EDE8E0] flex items-center justify-center text-[#8C7B70]">
-                            <Check className="w-3.5 h-3.5" />
-                          </div>
-                          <div className="w-7 h-7 rounded-lg border border-[#EDE8E0] flex items-center justify-center text-[#8C7B70]">
-                            <X className="w-3.5 h-3.5" />
-                          </div>
-                        </div>
+                        /* Regular user view: cannot approve/reject their own request */
+                        req.status === 'pending' ? (
+                          <button
+                            type="button"
+                            onClick={() => handleCancel(req.id)}
+                            className="px-2.5 py-1 rounded-lg border border-stone-200 hover:border-red-300 hover:bg-red-50 text-[10px] font-bold text-stone-600 hover:text-red-600 transition cursor-pointer"
+                            title="Cancel this reservation request"
+                          >
+                            Cancel Request
+                          </button>
+                        ) : req.status === 'approved' ? (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                            Confirmed
+                          </span>
+                        ) : req.status === 'rejected' ? (
+                          <span className="text-[10px] font-bold text-stone-400">
+                            Declined
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-stone-400">
+                            Cancelled
+                          </span>
+                        )
                       )}
                     </td>
                   </tr>

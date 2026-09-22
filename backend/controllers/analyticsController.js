@@ -2,6 +2,7 @@ const Equipment = require('../src/models/Equipment');
 const Booking = require('../models/Booking');
 const UsageLog = require('../models/UsageLog');
 const Institution = require('../src/models/Institution');
+const { isDemoAdmin, escapeRegex } = require('../src/utils/apiHelpers');
 
 /**
  * @desc    Get dashboard metrics for Admin Dashboard
@@ -9,10 +10,78 @@ const Institution = require('../src/models/Institution');
  */
 const getDashboardAnalytics = async (req, res, next) => {
   try {
-    const [equipmentList, bookings, usageLogs] = await Promise.all([
-      Equipment.find(),
-      Booking.find(),
-      UsageLog.find(),
+    const isDemo = isDemoAdmin(req.user);
+
+    let equipmentQuery = {};
+    let bookingQuery = {};
+    let usageQuery = {};
+
+    if (req.user && req.user.role === 'admin' && !isDemo) {
+      const eqFilters = [];
+      if (req.user._id) eqFilters.push({ createdBy: req.user._id });
+      if (req.user.institution) {
+        const instRegex = new RegExp(`^${escapeRegex(req.user.institution)}$`, 'i');
+        eqFilters.push({
+          $and: [
+            { $or: [{ institution: instRegex }, { collegeName: instRegex }] },
+            { createdBy: { $ne: null } },
+          ],
+        });
+      }
+
+      if (eqFilters.length > 0) {
+        equipmentQuery = { $or: eqFilters };
+      } else {
+        equipmentQuery = { _id: null }; // Force empty
+      }
+    }
+
+    const equipmentList = await Equipment.find(equipmentQuery);
+
+    if (req.user && req.user.role === 'admin' && !isDemo) {
+      if (equipmentList.length === 0) {
+        return res.json({
+          success: true,
+          data: {
+            stats: {
+              totalEquipment: 0,
+              activeBookings: 0,
+              pendingRequests: 0,
+              utilizationRate: 0,
+            },
+            recentActivity: [],
+            utilizationData: [
+              { name: '08:00', rate: 0 },
+              { name: '10:00', rate: 0 },
+              { name: '12:00', rate: 0 },
+              { name: '14:00', rate: 0 },
+              { name: '16:00', rate: 0 },
+              { name: '18:00', rate: 0 },
+            ],
+            facilities: [],
+          },
+        });
+      }
+
+      const eqIds = equipmentList.map((e) => e._id);
+      const eqStringIds = equipmentList.map((e) => e.equipmentId).filter(Boolean);
+      bookingQuery = {
+        $or: [
+          { equipment: { $in: eqIds } },
+          { equipmentId: { $in: eqStringIds } },
+        ],
+      };
+      usageQuery = {
+        $or: [
+          { equipment: { $in: eqIds } },
+          { equipmentId: { $in: eqStringIds } },
+        ],
+      };
+    }
+
+    const [bookings, usageLogs] = await Promise.all([
+      Booking.find(bookingQuery),
+      UsageLog.find(usageQuery),
     ]);
 
     const totalEquipment = equipmentList.length;
@@ -101,10 +170,78 @@ const getDashboardAnalytics = async (req, res, next) => {
  */
 const getAnalyticsReports = async (req, res, next) => {
   try {
-    const [equipmentList, bookings, usageLogs] = await Promise.all([
-      Equipment.find(),
-      Booking.find(),
-      UsageLog.find(),
+    const isDemo = isDemoAdmin(req.user);
+
+    let equipmentQuery = {};
+    let bookingQuery = {};
+    let usageQuery = {};
+
+    if (req.user && req.user.role === 'admin' && !isDemo) {
+      const eqFilters = [];
+      if (req.user._id) eqFilters.push({ createdBy: req.user._id });
+      if (req.user.institution) {
+        const instRegex = new RegExp(`^${escapeRegex(req.user.institution)}$`, 'i');
+        eqFilters.push({
+          $and: [
+            { $or: [{ institution: instRegex }, { collegeName: instRegex }] },
+            { createdBy: { $ne: null } },
+          ],
+        });
+      }
+
+      if (eqFilters.length > 0) {
+        equipmentQuery = { $or: eqFilters };
+      } else {
+        equipmentQuery = { _id: null };
+      }
+    }
+
+    const equipmentList = await Equipment.find(equipmentQuery);
+
+    if (req.user && req.user.role === 'admin' && !isDemo) {
+      if (equipmentList.length === 0) {
+        return res.json({
+          success: true,
+          data: {
+            kpis: {
+              totalBookings: 0,
+              completedSessions: 0,
+              totalUsageHours: 0,
+              avgUtilization: 0,
+              activeEquipment: '0 / 0',
+            },
+            trend: [],
+            activity: [],
+            utilSorted: [],
+            perEquipment: [],
+            statusPct: [],
+            labs: [],
+            peak: { window: 'N/A', sessions: 0 },
+            lowest: { window: 'N/A', sessions: 0 },
+            sessionsByWindow: [],
+          },
+        });
+      }
+
+      const eqIds = equipmentList.map((e) => e._id);
+      const eqStringIds = equipmentList.map((e) => e.equipmentId).filter(Boolean);
+      bookingQuery = {
+        $or: [
+          { equipment: { $in: eqIds } },
+          { equipmentId: { $in: eqStringIds } },
+        ],
+      };
+      usageQuery = {
+        $or: [
+          { equipment: { $in: eqIds } },
+          { equipmentId: { $in: eqStringIds } },
+        ],
+      };
+    }
+
+    const [bookings, usageLogs] = await Promise.all([
+      Booking.find(bookingQuery),
+      UsageLog.find(usageQuery),
     ]);
 
     const totalEquipment = equipmentList.length;
